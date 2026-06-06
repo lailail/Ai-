@@ -21,11 +21,13 @@ class DatabaseSchemaInitializationTests {
     private DataSource dataSource;
 
     @Test
-    void shouldInitializeCoreTables() throws Exception {
+    void test_p3_c3_schema_tables() throws Exception {
         try (Connection connection = dataSource.getConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
             assertTrue(tableExists(metaData, "project"));
             assertTrue(tableExists(metaData, "source_chapter"));
+            assertTrue(tableExists(metaData, "chapter_context"));
+            assertTrue(tableExists(metaData, "story_bible"));
             assertTrue(tableExists(metaData, "adaptation_job"));
             assertTrue(tableExists(metaData, "script_version"));
             assertTrue(tableExists(metaData, "yaml_snapshot"));

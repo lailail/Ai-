@@ -8,3 +8,10 @@ spring:
     init:
       mode: always
       schema-locations: classpath:db/schema.sql
+
+novel-script:
+  ai:
+    deepseek:
+      enabled: false
+    prompt:
+      location: classpath:prompts/
