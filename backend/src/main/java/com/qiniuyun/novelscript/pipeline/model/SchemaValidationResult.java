@@ -16,7 +16,7 @@ public class SchemaValidationResult {
     private boolean valid;
 
     /**
-     * 错误列表。
+     * 校验错误列表。
      */
     private List<SchemaValidationError> errors = new ArrayList<>();
 }

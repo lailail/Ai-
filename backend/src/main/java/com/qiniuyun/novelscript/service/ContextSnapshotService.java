@@ -1,11 +1,12 @@
 package com.qiniuyun.novelscript.service;
 
+import com.qiniuyun.novelscript.controller.response.StoryBibleResponse;
 import com.qiniuyun.novelscript.pipeline.model.ChapterContextResult;
 import com.qiniuyun.novelscript.pipeline.model.StoryBibleResult;
 import java.util.List;
 
 /**
- * 负责保存改编流水线中的长期上下文快照。
+ * 负责保存和查询改编流程中的长期上下文快照。
  */
 public interface ContextSnapshotService {
 
@@ -24,4 +25,12 @@ public interface ContextSnapshotService {
      * @return 保存后的 Story Bible 快照 ID
      */
     Long saveStoryBible(StoryBibleResult storyBibleResult, List<Long> sourceContextIds);
+
+    /**
+     * 查询指定项目当前最新的 Story Bible 快照。
+     *
+     * @param projectId 项目 ID
+     * @return 最新 Story Bible 响应
+     */
+    StoryBibleResponse getLatestStoryBible(Long projectId);
 }

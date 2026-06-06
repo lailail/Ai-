@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qiniuyun.novelscript.common.exception.ResourceNotFoundException;
 import com.qiniuyun.novelscript.config.ai.DeepSeekProperties;
+import com.qiniuyun.novelscript.controller.response.StoryBibleResponse;
 import com.qiniuyun.novelscript.domain.entity.ChapterContext;
 import com.qiniuyun.novelscript.domain.entity.SourceChapter;
 import com.qiniuyun.novelscript.domain.entity.StoryBible;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 /**
- * 改编上下文快照保存服务实现。
+ * 改编上下文快照保存与查询服务实现。
  */
 @Slf4j
 @Service
@@ -33,6 +34,15 @@ public class ContextSnapshotServiceImpl implements ContextSnapshotService {
     private final ObjectMapper objectMapper;
     private final DeepSeekProperties deepSeekProperties;
 
+    /**
+     * 构造上下文快照服务实现。
+     *
+     * @param sourceChapterMapper 原始章节 Mapper
+     * @param chapterContextMapper 单章上下文 Mapper
+     * @param storyBibleMapper Story Bible Mapper
+     * @param objectMapper JSON 读写工具
+     * @param deepSeekProperties DeepSeek 配置
+     */
     public ContextSnapshotServiceImpl(
         SourceChapterMapper sourceChapterMapper,
         ChapterContextMapper chapterContextMapper,
@@ -96,7 +106,7 @@ public class ContextSnapshotServiceImpl implements ContextSnapshotService {
     @Transactional
     public Long saveStoryBible(StoryBibleResult storyBibleResult, List<Long> sourceContextIds) {
         if (storyBibleResult == null || storyBibleResult.getProjectId() == null) {
-            throw new IllegalArgumentException("保存 Story Bible 时项目ID不能为空。");
+            throw new IllegalArgumentException("保存 Story Bible 时项目 ID 不能为空。");
         }
 
         StoryBible storyBible = new StoryBible();
@@ -115,6 +125,42 @@ public class ContextSnapshotServiceImpl implements ContextSnapshotService {
         return storyBible.getId();
     }
 
+    /**
+     * 查询指定项目当前最新的 Story Bible 快照。
+     *
+     * @param projectId 项目 ID
+     * @return 最新 Story Bible 响应
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public StoryBibleResponse getLatestStoryBible(Long projectId) {
+        StoryBible latestStoryBible = storyBibleMapper.selectOne(
+            new LambdaQueryWrapper<StoryBible>()
+                .eq(StoryBible::getProjectId, projectId)
+                .orderByDesc(StoryBible::getVersionNo)
+                .last("limit 1")
+        );
+        if (latestStoryBible == null) {
+            throw new ResourceNotFoundException("当前项目还没有可用的 Story Bible");
+        }
+
+        try {
+            StoryBibleResult storyBibleResult = objectMapper.readValue(latestStoryBible.getBibleJson(), StoryBibleResult.class);
+            log.info("【上下文快照】查询最新 Story Bible 成功，项目ID：{}，版本号：{}", projectId, latestStoryBible.getVersionNo());
+            return StoryBibleResponse.from(latestStoryBible, storyBibleResult);
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Story Bible 快照反序列化失败。", exception);
+        }
+    }
+
+    /**
+     * 根据项目 ID 和章节号查找原始章节实体。
+     *
+     * @param projectId 项目 ID
+     * @param chapterNo 章节号
+     * @return 原始章节实体
+     */
     private SourceChapter findChapter(Long projectId, Integer chapterNo) {
         SourceChapter chapter = sourceChapterMapper.selectOne(
             new LambdaQueryWrapper<SourceChapter>()
@@ -128,6 +174,13 @@ public class ContextSnapshotServiceImpl implements ContextSnapshotService {
         return chapter;
     }
 
+    /**
+     * 查询当前章节是否已经存在上下文快照。
+     *
+     * @param projectId 项目 ID
+     * @param chapterId 章节 ID
+     * @return 已有的上下文快照实体
+     */
     private ChapterContext findExistingChapterContext(Long projectId, Long chapterId) {
         return chapterContextMapper.selectOne(
             new LambdaQueryWrapper<ChapterContext>()
@@ -137,6 +190,12 @@ public class ContextSnapshotServiceImpl implements ContextSnapshotService {
         );
     }
 
+    /**
+     * 计算指定项目下一个 Story Bible 版本号。
+     *
+     * @param projectId 项目 ID
+     * @return 下一个版本号
+     */
     private Integer resolveNextVersionNo(Long projectId) {
         StoryBible latestStoryBible = storyBibleMapper.selectOne(
             new LambdaQueryWrapper<StoryBible>()
@@ -150,6 +209,12 @@ public class ContextSnapshotServiceImpl implements ContextSnapshotService {
         return latestStoryBible.getVersionNo() + 1;
     }
 
+    /**
+     * 将对象序列化为 JSON 字符串。
+     *
+     * @param value 待序列化对象
+     * @return JSON 字符串
+     */
     private String writeAsJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

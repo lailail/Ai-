@@ -1,0 +1,33 @@
+import type { ApiResponse } from "../types/api";
+
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+export async function requestJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {})
+    }
+  });
+
+  const text = await response.text();
+  const json = text ? (JSON.parse(text) as ApiResponse<T>) : null;
+
+  if (!response.ok) {
+    throw new ApiRequestError(json?.message ?? `请求失败，状态码：${response.status}`, response.status);
+  }
+
+  if (!json?.success) {
+    throw new ApiRequestError(json?.message ?? "请求未成功", response.status);
+  }
+
+  return json.data;
+}

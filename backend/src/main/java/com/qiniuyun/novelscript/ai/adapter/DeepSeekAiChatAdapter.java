@@ -1,8 +1,7 @@
 package com.qiniuyun.novelscript.ai.adapter;
 
-import java.util.List;
-
 import com.qiniuyun.novelscript.config.ai.DeepSeekProperties;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.ChatResponse;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -20,6 +19,12 @@ public class DeepSeekAiChatAdapter implements AiChatAdapter {
     private final DeepSeekProperties deepSeekProperties;
     private final OpenAiChatClient openAiChatClient;
 
+    /**
+     * 构造 DeepSeek 聊天适配器。
+     *
+     * @param deepSeekProperties DeepSeek 配置
+     * @param openAiChatClient Spring AI 聊天客户端
+     */
     public DeepSeekAiChatAdapter(DeepSeekProperties deepSeekProperties, OpenAiChatClient openAiChatClient) {
         this.deepSeekProperties = deepSeekProperties;
         this.openAiChatClient = openAiChatClient;

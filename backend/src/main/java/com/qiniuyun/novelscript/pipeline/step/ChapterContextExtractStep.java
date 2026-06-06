@@ -1,10 +1,5 @@
 package com.qiniuyun.novelscript.pipeline.step;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +7,10 @@ import com.qiniuyun.novelscript.ai.adapter.AiChatAdapter;
 import com.qiniuyun.novelscript.ai.prompt.PromptTemplateService;
 import com.qiniuyun.novelscript.pipeline.model.ChapterContextResult;
 import com.qiniuyun.novelscript.pipeline.model.NormalizedChapter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -26,13 +25,20 @@ public class ChapterContextExtractStep {
     public static final String SYSTEM_PROMPT = """
         你是小说改编上下文分析助手。
         请严格根据提供的章节内容输出 JSON，不要输出 Markdown，不要补充额外解释。
-        只保留以下字段：summary、characters、locations、events、conflicts、emotion_changes、foreshadowing、key_dialogues、source_refs。
+        只保留下列字段：summary、characters、locations、events、conflicts、emotion_changes、foreshadowing、key_dialogues、source_refs。
         """;
 
     private final AiChatAdapter aiChatAdapter;
     private final PromptTemplateService promptTemplateService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 构造单章上下文抽取步骤。
+     *
+     * @param aiChatAdapter AI 文本生成适配器
+     * @param promptTemplateService Prompt 模板服务
+     * @param objectMapper JSON 读写工具
+     */
     public ChapterContextExtractStep(
         AiChatAdapter aiChatAdapter,
         PromptTemplateService promptTemplateService,
@@ -67,6 +73,11 @@ public class ChapterContextExtractStep {
         return result;
     }
 
+    /**
+     * 校验单章上下文抽取输入。
+     *
+     * @param normalizedChapter 标准化章节
+     */
     private void validateInput(NormalizedChapter normalizedChapter) {
         if (normalizedChapter == null) {
             throw new IllegalArgumentException("章节上下文抽取输入不能为空。");
@@ -76,6 +87,12 @@ public class ChapterContextExtractStep {
         }
     }
 
+    /**
+     * 组装单章上下文抽取 Prompt 变量。
+     *
+     * @param normalizedChapter 标准化章节
+     * @return Prompt 变量映射
+     */
     private Map<String, Object> buildPromptVariables(NormalizedChapter normalizedChapter) {
         Map<String, Object> variables = new LinkedHashMap<>();
         variables.put("chapterNo", normalizedChapter.getChapterNo());
@@ -85,6 +102,13 @@ public class ChapterContextExtractStep {
         return variables;
     }
 
+    /**
+     * 解析模型返回的单章上下文结果，并补齐回填字段。
+     *
+     * @param aiResponse 模型原始返回
+     * @param normalizedChapter 标准化章节
+     * @return 单章上下文结果
+     */
     private ChapterContextResult parseResponse(String aiResponse, NormalizedChapter normalizedChapter) {
         if (!StringUtils.hasText(aiResponse)) {
             throw new IllegalStateException("章节上下文抽取结果为空。");
@@ -112,6 +136,12 @@ public class ChapterContextExtractStep {
         }
     }
 
+    /**
+     * 过滤空字符串并清理列表项首尾空白。
+     *
+     * @param values 原始字符串列表
+     * @return 清洗后的字符串列表
+     */
     private List<String> safeList(List<String> values) {
         if (values == null) {
             return new ArrayList<>();
@@ -123,6 +153,13 @@ public class ChapterContextExtractStep {
             .toList();
     }
 
+    /**
+     * 解析章节来源引用，缺省时自动回填当前章节号。
+     *
+     * @param sourceRefs 模型返回的来源引用
+     * @param chapterNo 当前章节号
+     * @return 规范化后的来源引用列表
+     */
     private List<String> resolveSourceRefs(List<String> sourceRefs, Integer chapterNo) {
         List<String> safeSourceRefs = safeList(sourceRefs);
         if (!safeSourceRefs.isEmpty()) {

@@ -10,6 +10,9 @@ import org.junit.jupiter.api.Test;
  */
 class SchemaValidateStepTests {
 
+    /**
+     * 验证合法 YAML 能够通过 Schema 校验。
+     */
     @Test
     void test_p3_c4_schema_validate_success() {
         SchemaValidateStep schemaValidateStep = new SchemaValidateStep();
@@ -18,13 +21,13 @@ class SchemaValidateStepTests {
             schema_version: "1.0"
             project:
               id: "project_1001"
-              title: "长夜余烬"
+              title: "Long Night Ember"
               source_chapters: [1, 2, 3]
               adaptation_mode: "novel_to_screenplay"
             story_bible:
               characters:
                 - id: "char_shenyan"
-                  name: "沈砚"
+                  name: "Shen Yan"
               relationships: []
               locations: []
               timeline: []
@@ -33,20 +36,20 @@ class SchemaValidateStepTests {
               adaptation_strategy: []
             episodes:
               - id: "ep01"
-                title: "旧城疑影"
-                premise: "引出主线"
+                title: "Shadow Over The Old Town"
+                premise: "Introduce the main suspense line"
                 source_refs: ["chapter:1"]
                 scenes:
                   - id: "sc01"
-                    slugline: "夜 外 旧城巷口"
-                    purpose: "建立悬疑氛围"
+                    slugline: "EXT. OLD TOWN ALLEY - NIGHT"
+                    purpose: "Set the suspense tone"
                     source_refs: ["chapter:1"]
                     characters: ["char_shenyan"]
-                    actions: ["沈砚停下脚步。"]
+                    actions: ["Shen Yan slows to a stop."]
                     beats: []
                     dialogue:
                       - character_id: "char_shenyan"
-                        line: "这里昨晚一定出过事。"
+                        line: "Something happened here."
                     transition: "CUT_TO"
             metadata:
               generated_at: "2026-06-06T14:10:00+08:00"
@@ -58,6 +61,9 @@ class SchemaValidateStepTests {
         assertThat(result.getErrors()).isEmpty();
     }
 
+    /**
+     * 验证非法 YAML 会返回明确的错误路径。
+     */
     @Test
     void test_p3_c4_schema_validate_failure() {
         SchemaValidateStep schemaValidateStep = new SchemaValidateStep();

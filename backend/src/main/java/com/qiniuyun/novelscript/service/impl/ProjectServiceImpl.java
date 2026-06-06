@@ -9,6 +9,8 @@ import com.qiniuyun.novelscript.domain.entity.SourceChapter;
 import com.qiniuyun.novelscript.mapper.ProjectMapper;
 import com.qiniuyun.novelscript.mapper.SourceChapterMapper;
 import com.qiniuyun.novelscript.service.ProjectService;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +50,25 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     /**
+     * 查询当前所有改编项目摘要。
+     *
+     * @return 项目列表响应
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProjectResponse> listProjects() {
+        log.info("【项目服务】开始查询项目列表");
+        List<Project> projects = projectMapper.selectList(
+            new LambdaQueryWrapper<Project>().orderByDesc(Project::getUpdatedAt).orderByDesc(Project::getId)
+        );
+        List<ProjectResponse> responses = projects.stream()
+            .map(this::toProjectResponse)
+            .collect(Collectors.toList());
+        log.info("【项目服务】项目列表查询完成，项目数量：{}", responses.size());
+        return responses;
+    }
+
+    /**
      * 查询指定项目详情。
      *
      * @param projectId 项目 ID
@@ -66,6 +87,13 @@ public class ProjectServiceImpl implements ProjectService {
             new LambdaQueryWrapper<SourceChapter>().eq(SourceChapter::getProjectId, projectId)
         );
         log.info("【项目服务】项目查询完成，项目ID：{}，章节数：{}", projectId, chapterCount == null ? 0 : chapterCount);
+        return ProjectResponse.from(project, chapterCount == null ? 0 : chapterCount.intValue());
+    }
+
+    private ProjectResponse toProjectResponse(Project project) {
+        Long chapterCount = sourceChapterMapper.selectCount(
+            new LambdaQueryWrapper<SourceChapter>().eq(SourceChapter::getProjectId, project.getId())
+        );
         return ProjectResponse.from(project, chapterCount == null ? 0 : chapterCount.intValue());
     }
 }
