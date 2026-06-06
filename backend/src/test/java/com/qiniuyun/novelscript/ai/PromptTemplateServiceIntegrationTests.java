@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * 验证 AI 基础设施在未接入真实模型前的最小可用性。
+ * 验证 AI 提示词模板与适配器的最小可用性。
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -30,12 +30,16 @@ class PromptTemplateServiceIntegrationTests {
         String renderedPrompt = promptTemplateService.render(
             "chapter-context-extract",
             Map.of(
+                "chapterNo", 1,
                 "chapterTitle", "第一章 夜雨入城",
+                "wordCount", 18,
                 "chapterContent", "夜色压城，沈砚第一次走进青石巷。"
             )
         );
 
+        assertThat(renderedPrompt).contains("1");
         assertThat(renderedPrompt).contains("第一章 夜雨入城");
+        assertThat(renderedPrompt).contains("18");
         assertThat(renderedPrompt).contains("夜色压城，沈砚第一次走进青石巷。");
     }
 
