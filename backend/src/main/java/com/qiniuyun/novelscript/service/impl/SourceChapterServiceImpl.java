@@ -9,6 +9,8 @@ import com.qiniuyun.novelscript.domain.entity.SourceChapter;
 import com.qiniuyun.novelscript.mapper.ProjectMapper;
 import com.qiniuyun.novelscript.mapper.SourceChapterMapper;
 import com.qiniuyun.novelscript.service.SourceChapterService;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +63,30 @@ public class SourceChapterServiceImpl implements SourceChapterService {
             chapter.getWordCount()
         );
         return SourceChapterResponse.from(chapter);
+    }
+
+    /**
+     * 查询指定项目下已经保存的章节列表。
+     *
+     * @param projectId 项目 ID
+     * @return 章节列表响应
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<SourceChapterResponse> listChapters(Long projectId) {
+        ensureProjectExists(projectId);
+        log.info("【章节服务】开始查询章节列表，项目ID：{}", projectId);
+        List<SourceChapter> chapters = sourceChapterMapper.selectList(
+            new LambdaQueryWrapper<SourceChapter>()
+                .eq(SourceChapter::getProjectId, projectId)
+                .orderByAsc(SourceChapter::getChapterNo)
+                .orderByAsc(SourceChapter::getId)
+        );
+        List<SourceChapterResponse> responses = chapters.stream()
+            .map(SourceChapterResponse::from)
+            .collect(Collectors.toList());
+        log.info("【章节服务】章节列表查询完成，项目ID：{}，章节数：{}", projectId, responses.size());
+        return responses;
     }
 
     /**

@@ -80,6 +80,50 @@ class ProjectApiIntegrationTests {
             .andExpect(jsonPath("$.data.chapterCount").value(1));
     }
 
+    @Test
+    void test_pr4_1_list_projects_and_chapters() throws Exception {
+        MvcResult projectResult = mockMvc.perform(
+                post("/api/projects")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "title": "前端联调项目",
+                          "description": "用于验证项目列表和章节列表接口"
+                        }
+                        """)
+            )
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        Long projectId = extractProjectId(projectResult);
+
+        mockMvc.perform(
+                post("/api/projects/{projectId}/chapters", projectId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "chapterNo": 1,
+                          "title": "第一章",
+                          "content": "夜色降临，旧码头只剩潮水声。"
+                        }
+                        """)
+            )
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/projects"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data[0].id").value(projectId))
+            .andExpect(jsonPath("$.data[0].chapterCount").value(1));
+
+        mockMvc.perform(get("/api/projects/{projectId}/chapters", projectId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data[0].projectId").value(projectId))
+            .andExpect(jsonPath("$.data[0].chapterNo").value(1))
+            .andExpect(jsonPath("$.data[0].title").value("第一章"));
+    }
+
     /**
      * 从创建项目响应中提取项目 ID。
      *

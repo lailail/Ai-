@@ -1,15 +1,15 @@
 # AI 小说转剧本工具
 
-本项目用于将 3 个章节以上的小说文本转换为结构化剧本 YAML，帮助作者更快获得可编辑、可继续打磨的剧本初稿。
+本项目用于将 3 个章节以上的小说文本转换为结构化剧本 YAML，帮助作者更快得到可编辑、可继续打磨的剧本初稿。
 
-系统的核心思路不是一次性把整篇小说直接交给模型生成最终剧本，而是先抽取章节上下文，构建项目级 `Story Bible`，再分阶段生成剧本大纲、场景和 YAML。这样可以减少多章节改编中常见的人物漂移、剧情断裂、伏笔丢失和时间线混乱。
+系统不是一次性把整篇小说直接交给模型生成最终剧本，而是先提取章节上下文，构建项目级 `Story Bible`，再分阶段生成剧本大纲、场景和 YAML。这样可以减少多章节改编中常见的人物漂移、剧情断裂、伏笔丢失和时间线混乱。
 
 ## 核心功能
 
-- 多章节小说录入，支持同一作品持续追加章节
+- 支持多章节小说录入，并允许同一项目持续追加章节
 - 支持纯文本、`.txt` 和 `.md` 章节内容
 - 自动提取人物、关系、地点、事件、冲突、伏笔和时间线
-- 为每本小说构建独立的 `Story Bible`
+- 为每个小说项目构建独立的 `Story Bible`
 - 分阶段生成剧本大纲、场景内容和 YAML 初稿
 - 后端执行 YAML Schema 校验
 - 保存 `ScriptVersion` 与 `YamlSnapshot`，保留版本历史
@@ -33,8 +33,6 @@
 - TypeScript
 - Vite
 - Ant Design
-- Ant Design X
-- Monaco Editor
 - TanStack Query
 
 大模型：
@@ -50,7 +48,7 @@
 DEEPSEEK_API_KEY
 ```
 
-默认模型相关参数：
+默认模型参数：
 
 - Base URL：`https://api.deepseek.com`
 - Model：`deepseek-chat`
@@ -66,19 +64,19 @@ setx DEEPSEEK_API_KEY "你的 DeepSeek API Key"
 
 ## 本地数据库
 
-当前使用本地 MySQL，默认数据库名为：
+当前使用本地 MySQL，默认数据库名：
 
 ```text
 novel_script
 ```
 
-本地开发配置写在：
+本地开发连接写在：
 
 ```text
 backend/src/main/resources/application.yml
 ```
 
-当前默认本地连接为：
+当前默认本地连接：
 
 - 用户名：`root`
 - 密码：`123456`
@@ -90,13 +88,34 @@ backend/src/main/resources/db/schema.sql
 backend/src/main/resources/db/data.sql
 ```
 
+## 本地启动
+
+后端启动：
+
+```powershell
+cd backend
+mvn spring-boot:run
+```
+
+前端启动：
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+前端默认运行在 `http://localhost:5173`，并通过 Vite 代理把 `/api` 请求转发到 `http://localhost:8080`，本地联调时不需要额外配置 CORS。
+
 ## 最小接口
 
 当前后端已经提供以下最小接口：
 
 - `POST /api/projects`
+- `GET /api/projects`
 - `GET /api/projects/{projectId}`
 - `POST /api/projects/{projectId}/chapters`
+- `GET /api/projects/{projectId}/chapters`
 - `POST /api/projects/{projectId}/adaptations`
 - `GET /api/projects/{projectId}/scripts/latest`
 

@@ -11,6 +11,7 @@ import com.qiniuyun.novelscript.service.ProjectService;
 import com.qiniuyun.novelscript.service.SourceChapterService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +59,17 @@ public class ProjectController {
     }
 
     /**
+     * 查询当前所有改编项目摘要。
+     *
+     * @return 项目列表响应
+     */
+    @GetMapping
+    public ApiResponse<List<ProjectResponse>> listProjects() {
+        log.info("收到查询项目列表请求");
+        return ApiResponse.success(projectService.listProjects());
+    }
+
+    /**
      * 查询指定改编项目。
      *
      * @param projectId 项目 ID
@@ -89,6 +101,18 @@ public class ProjectController {
         );
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.success(sourceChapterService.createChapter(projectId, request)));
+    }
+
+    /**
+     * 查询指定项目下已经录入的章节列表。
+     *
+     * @param projectId 项目 ID
+     * @return 章节列表响应
+     */
+    @GetMapping("/{projectId}/chapters")
+    public ApiResponse<List<SourceChapterResponse>> listChapters(@PathVariable @Min(1) Long projectId) {
+        log.info("收到查询章节列表请求，项目ID：{}", projectId);
+        return ApiResponse.success(sourceChapterService.listChapters(projectId));
     }
 
     /**
