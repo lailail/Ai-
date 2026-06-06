@@ -87,6 +87,11 @@ body {
   margin-top: 28px;
 }
 
+.workspace-grid-wide {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.9fr) minmax(320px, 0.95fr);
+  align-items: start;
+}
+
 .workspace-header {
   display: flex;
   align-items: flex-start;
@@ -103,6 +108,32 @@ body {
 }
 
 .workspace-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.workspace-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.workspace-tabs-shell {
+  margin-top: 24px;
+  padding: 8px 0 0;
+}
+
+.workspace-tabs-shell .ant-tabs-nav {
+  margin-bottom: 20px;
+}
+
+.workspace-tabs-shell .ant-tabs-tab {
+  padding: 14px 6px;
+  font-size: 15px;
+}
+
+.workspace-tab-stack {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -152,6 +183,83 @@ body {
   flex-direction: column;
   gap: 12px;
   margin-top: 20px;
+}
+
+.status-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.progress-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.workspace-steps .ant-steps-item-title {
+  font-size: 12px;
+}
+
+.status-note {
+  margin-bottom: 0;
+  color: rgba(247, 242, 233, 0.88) !important;
+}
+
+.workspace-alert {
+  margin-top: 20px;
+  border-radius: 16px;
+}
+
+.workspace-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.workspace-list-item {
+  padding-inline: 0 !important;
+}
+
+.tiny-copy {
+  margin-bottom: 0 !important;
+  color: rgba(30, 42, 50, 0.72);
+}
+
+.tag-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.yaml-preview {
+  max-height: 680px;
+  overflow: auto;
+  padding: 18px;
+  border-radius: 18px;
+  background: #f3ede1;
+  border: 1px solid rgba(22, 50, 79, 0.08);
+}
+
+.yaml-preview pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "JetBrains Mono", "Cascadia Code", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #1a2f46;
 }
 
 .empty-state {

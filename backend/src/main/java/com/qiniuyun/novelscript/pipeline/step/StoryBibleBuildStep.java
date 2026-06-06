@@ -6,17 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qiniuyun.novelscript.ai.adapter.AiChatAdapter;
 import com.qiniuyun.novelscript.ai.prompt.PromptTemplateService;
 import com.qiniuyun.novelscript.pipeline.model.GlobalContextMergeResult;
-import com.qiniuyun.novelscript.pipeline.model.StoryBibleCharacter;
-import com.qiniuyun.novelscript.pipeline.model.StoryBibleConflict;
-import com.qiniuyun.novelscript.pipeline.model.StoryBibleForeshadowing;
-import com.qiniuyun.novelscript.pipeline.model.StoryBibleLocation;
-import com.qiniuyun.novelscript.pipeline.model.StoryBibleRelationship;
 import com.qiniuyun.novelscript.pipeline.model.StoryBibleResult;
-import com.qiniuyun.novelscript.pipeline.model.StoryBibleTimelineEvent;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -31,13 +24,20 @@ public class StoryBibleBuildStep {
     public static final String SYSTEM_PROMPT = """
         你是影视和短剧改编策划助手。
         请严格根据输入的全局上下文输出 JSON，不要输出 Markdown，不要补充额外解释。
-        只保留以下字段：characters、relationships、locations、timeline、conflicts、foreshadowing、adaptation_strategy。
+        只保留下列字段：characters、relationships、locations、timeline、conflicts、foreshadowing、adaptation_strategy。
         """;
 
     private final AiChatAdapter aiChatAdapter;
     private final PromptTemplateService promptTemplateService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 构造 Story Bible 构建步骤。
+     *
+     * @param aiChatAdapter AI 文本生成适配器
+     * @param promptTemplateService Prompt 模板服务
+     * @param objectMapper JSON 读写工具
+     */
     public StoryBibleBuildStep(
         AiChatAdapter aiChatAdapter,
         PromptTemplateService promptTemplateService,
@@ -58,7 +58,7 @@ public class StoryBibleBuildStep {
     public StoryBibleResult execute(Long projectId, GlobalContextMergeResult globalContext) {
         validateInput(projectId, globalContext);
         String globalContextJson = writeAsJson(globalContext);
-        Map<String, Object> variables = new LinkedHashMap<>();
+        LinkedHashMap<String, Object> variables = new LinkedHashMap<>();
         variables.put("globalContext", globalContextJson);
         String userPrompt = promptTemplateService.render("story-bible-build", variables);
 
@@ -75,15 +75,27 @@ public class StoryBibleBuildStep {
         return result;
     }
 
+    /**
+     * 校验 Story Bible 构建输入。
+     *
+     * @param projectId 项目 ID
+     * @param globalContext 全局上下文结果
+     */
     private void validateInput(Long projectId, GlobalContextMergeResult globalContext) {
         if (projectId == null) {
-            throw new IllegalArgumentException("构建 Story Bible 时项目ID不能为空。");
+            throw new IllegalArgumentException("构建 Story Bible 时项目 ID 不能为空。");
         }
         if (globalContext == null) {
             throw new IllegalArgumentException("构建 Story Bible 时全局上下文不能为空。");
         }
     }
 
+    /**
+     * 将对象序列化为 JSON，供 Prompt 模板渲染使用。
+     *
+     * @param value 待序列化对象
+     * @return JSON 字符串
+     */
     private String writeAsJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -93,6 +105,13 @@ public class StoryBibleBuildStep {
         }
     }
 
+    /**
+     * 解析模型返回的 Story Bible 结果。
+     *
+     * @param projectId 项目 ID
+     * @param aiResponse 模型原始返回
+     * @return Story Bible 结构化结果
+     */
     private StoryBibleResult parseResponse(Long projectId, String aiResponse) {
         if (!StringUtils.hasText(aiResponse)) {
             throw new IllegalStateException("Story Bible 构建结果为空。");
@@ -115,6 +134,13 @@ public class StoryBibleBuildStep {
         }
     }
 
+    /**
+     * 过滤实体列表中的空对象。
+     *
+     * @param values 原始实体列表
+     * @param <T> 实体类型
+     * @return 清洗后的实体列表
+     */
     private <T> List<T> safeEntityList(List<T> values) {
         if (values == null) {
             return new ArrayList<>();
@@ -122,6 +148,12 @@ public class StoryBibleBuildStep {
         return values.stream().filter(java.util.Objects::nonNull).toList();
     }
 
+    /**
+     * 过滤空字符串并清理列表项首尾空白。
+     *
+     * @param values 原始字符串列表
+     * @return 清洗后的字符串列表
+     */
     private List<String> safeStringList(List<String> values) {
         if (values == null) {
             return new ArrayList<>();

@@ -3,10 +3,9 @@ package com.qiniuyun.novelscript.ai;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Map;
-
 import com.qiniuyun.novelscript.ai.adapter.AiChatAdapter;
 import com.qiniuyun.novelscript.ai.prompt.PromptTemplateService;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,24 +24,30 @@ class PromptTemplateServiceIntegrationTests {
     @Autowired
     private AiChatAdapter aiChatAdapter;
 
+    /**
+     * 验证章节上下文 Prompt 能从类路径加载并渲染成功。
+     */
     @Test
     void shouldLoadAndRenderChapterContextPromptFromClasspath() {
         String renderedPrompt = promptTemplateService.render(
             "chapter-context-extract",
             Map.of(
                 "chapterNo", 1,
-                "chapterTitle", "第一章 夜雨入城",
+                "chapterTitle", "Chapter 1 Rainy Arrival",
                 "wordCount", 18,
-                "chapterContent", "夜色压城，沈砚第一次走进青石巷。"
+                "chapterContent", "Night presses down while Shen Yan enters the alley."
             )
         );
 
         assertThat(renderedPrompt).contains("1");
-        assertThat(renderedPrompt).contains("第一章 夜雨入城");
+        assertThat(renderedPrompt).contains("Chapter 1 Rainy Arrival");
         assertThat(renderedPrompt).contains("18");
-        assertThat(renderedPrompt).contains("夜色压城，沈砚第一次走进青石巷。");
+        assertThat(renderedPrompt).contains("Night presses down while Shen Yan enters the alley.");
     }
 
+    /**
+     * 验证未启用 DeepSeek 时会返回清晰异常信息。
+     */
     @Test
     void shouldFailWithClearChineseMessageWhenDeepSeekIsNotEnabled() {
         assertThatThrownBy(() -> aiChatAdapter.chat("你是改编助手", "请开始分析"))

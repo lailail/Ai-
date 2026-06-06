@@ -10,6 +10,8 @@ spring:
       schema-locations: classpath:db/schema.sql
 
 novel-script:
+  adaptation:
+    async-enabled: false
   ai:
     deepseek:
       enabled: false

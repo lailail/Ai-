@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Form, Input, List, Spin, Tag, Typography, message } from "antd";
 import { ArrowRightOutlined } from "@ant-design/icons";
+import { Button, Form, Input, List, Spin, Tag, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { createProject, listProjects } from "../api/projects";
-import { getRecentProjectIds, saveRecentProjectId } from "../utils/recent-projects";
 import type { CreateProjectPayload, Project } from "../types/project";
+import { getRecentProjectIds, saveRecentProjectId } from "../utils/recent-projects";
 
 type ProjectFormValues = {
   title: string;
@@ -69,13 +69,14 @@ export function HomePage() {
             再让剧本改编有上下文可循。
           </Typography.Title>
           <Typography.Paragraph>
-            这个阶段先完成前端录入闭环。你可以创建改编项目、持续补充章节，并用真实章节数量卡住后续 AI 改编入口。
+            这个阶段先完成项目前台入口。你可以创建改编项目、持续补充章节，并用真实章节数量卡住后续 AI
+            改编入口，让生成过程始终建立在完整上下文之上。
           </Typography.Paragraph>
         </div>
         <div className="paper-note">
           <span>3 章以上</span>
           <span>项目独立上下文</span>
-          <span>为 Story Bible 做准备</span>
+          <span>以 Story Bible 做准绳</span>
         </div>
       </section>
 
@@ -96,7 +97,11 @@ export function HomePage() {
             >
               <Input placeholder="例如：长夜余烬" size="large" />
             </Form.Item>
-            <Form.Item label="项目简介" name="description" rules={[{ max: 2000, message: "简介不能超过 2000 个字符" }]}>
+            <Form.Item
+              label="项目简介"
+              name="description"
+              rules={[{ max: 2000, message: "简介不能超过 2000 个字符" }]}
+            >
               <Input.TextArea placeholder="写下题材、基调、预计改编方向。" rows={5} />
             </Form.Item>
             <Button type="primary" htmlType="submit" size="large" loading={createProjectMutation.isPending}>

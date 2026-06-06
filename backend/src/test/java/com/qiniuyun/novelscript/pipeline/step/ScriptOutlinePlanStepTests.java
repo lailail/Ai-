@@ -35,6 +35,9 @@ class ScriptOutlinePlanStepTests {
 
     private ScriptOutlinePlanStep scriptOutlinePlanStep;
 
+    /**
+     * 初始化剧本大纲规划步骤实例。
+     */
     @BeforeEach
     void setUp() {
         scriptOutlinePlanStep = new ScriptOutlinePlanStep(
@@ -44,23 +47,26 @@ class ScriptOutlinePlanStepTests {
         );
     }
 
+    /**
+     * 验证 Story Bible 与章节上下文能够被规划成剧本大纲。
+     */
     @Test
     void test_p3_c4_outline_plan() {
-        when(promptTemplateService.render(eq("script-outline-plan"), anyMap())).thenReturn("请规划剧本大纲");
-        when(aiChatAdapter.chat(eq(ScriptOutlinePlanStep.SYSTEM_PROMPT), eq("请规划剧本大纲"))).thenReturn("""
+        when(promptTemplateService.render(eq("script-outline-plan"), anyMap())).thenReturn("plan outline");
+        when(aiChatAdapter.chat(eq(ScriptOutlinePlanStep.SYSTEM_PROMPT), eq("plan outline"))).thenReturn("""
             {
               "episodes": [
                 {
                   "id": "ep01",
-                  "title": "旧城疑影",
-                  "premise": "沈砚进入旧城并接触到第一批关键线索。",
+                  "title": "Shadow Over The Old Town",
+                  "premise": "Shen Yan enters the old town and touches the first key clues.",
                   "source_refs": ["chapter:1", "chapter:2", "chapter:3"],
                   "scenes": [
                     {
                       "id": "sc01",
-                      "slugline": "夜 外 旧城巷口",
-                      "purpose": "建立悬疑氛围并引出主线线索",
-                      "conflict": "沈砚犹豫是否继续深入",
+                      "slugline": "EXT. OLD TOWN ALLEY - NIGHT",
+                      "purpose": "Set the suspense tone and introduce the main clue",
+                      "conflict": "Shen Yan is unsure whether to go deeper",
                       "source_refs": ["chapter:1"],
                       "characters": ["char_shenyan"]
                     }
@@ -77,48 +83,58 @@ class ScriptOutlinePlanStepTests {
         ScriptOutlineEpisode episode = result.getEpisodes().get(0);
         assertThat(episode.getId()).isEqualTo("ep01");
         assertThat(episode.getScenes()).hasSize(1);
-        assertThat(episode.getScenes().get(0).getSlugline()).isEqualTo("夜 外 旧城巷口");
+        assertThat(episode.getScenes().get(0).getSlugline()).isEqualTo("EXT. OLD TOWN ALLEY - NIGHT");
         assertThat(episode.getScenes().get(0).getCharacters()).containsExactly("char_shenyan");
 
         verify(promptTemplateService).render(eq("script-outline-plan"), anyMap());
-        verify(aiChatAdapter).chat(eq(ScriptOutlinePlanStep.SYSTEM_PROMPT), eq("请规划剧本大纲"));
+        verify(aiChatAdapter).chat(eq(ScriptOutlinePlanStep.SYSTEM_PROMPT), eq("plan outline"));
     }
 
+    /**
+     * 构造测试用 Story Bible 结果。
+     *
+     * @return Story Bible 结果
+     */
     private StoryBibleResult buildStoryBible() {
         StoryBibleResult result = new StoryBibleResult();
         result.setProjectId(1001L);
 
         StoryBibleCharacter character = new StoryBibleCharacter();
         character.setId("char_shenyan");
-        character.setName("沈砚");
+        character.setName("Shen Yan");
         character.setRole("protagonist");
-        character.setGoal("查明旧案真相");
+        character.setGoal("Find the truth of the old case");
 
         result.setCharacters(List.of(character));
-        result.setAdaptationStrategy(List.of("前三章合并为第一集"));
+        result.setAdaptationStrategy(List.of("Merge the first three chapters into episode one"));
         return result;
     }
 
+    /**
+     * 构造测试用章节上下文列表。
+     *
+     * @return 章节上下文列表
+     */
     private List<ChapterContextResult> buildChapterContexts() {
         ChapterContextResult chapter1 = new ChapterContextResult();
         chapter1.setProjectId(1001L);
         chapter1.setChapterNo(1);
-        chapter1.setChapterTitle("第一章");
-        chapter1.setSummary("沈砚进入旧城。");
+        chapter1.setChapterTitle("Chapter 1");
+        chapter1.setSummary("Shen Yan enters the old town.");
         chapter1.setSourceRefs(List.of("chapter:1"));
 
         ChapterContextResult chapter2 = new ChapterContextResult();
         chapter2.setProjectId(1001L);
         chapter2.setChapterNo(2);
-        chapter2.setChapterTitle("第二章");
-        chapter2.setSummary("老周带来铜牌。");
+        chapter2.setChapterTitle("Chapter 2");
+        chapter2.setSummary("Lao Zhou brings the token.");
         chapter2.setSourceRefs(List.of("chapter:2"));
 
         ChapterContextResult chapter3 = new ChapterContextResult();
         chapter3.setProjectId(1001L);
         chapter3.setChapterNo(3);
-        chapter3.setChapterTitle("第三章");
-        chapter3.setSummary("林晚说出旧案。");
+        chapter3.setChapterTitle("Chapter 3");
+        chapter3.setSummary("Lin Wan reveals the old case.");
         chapter3.setSourceRefs(List.of("chapter:3"));
 
         return List.of(chapter1, chapter2, chapter3);

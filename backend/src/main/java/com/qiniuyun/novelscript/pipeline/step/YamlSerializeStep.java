@@ -15,6 +15,9 @@ public class YamlSerializeStep {
 
     private final YAMLMapper yamlMapper;
 
+    /**
+     * 构造 YAML 序列化步骤。
+     */
     public YamlSerializeStep() {
         this.yamlMapper = YAMLMapper.builder()
             .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)

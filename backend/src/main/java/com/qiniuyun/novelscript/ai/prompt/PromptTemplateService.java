@@ -1,5 +1,6 @@
 package com.qiniuyun.novelscript.ai.prompt;
 
+import com.qiniuyun.novelscript.config.ai.PromptProperties;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -7,8 +8,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import com.qiniuyun.novelscript.config.ai.PromptProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.core.io.Resource;
@@ -28,6 +27,12 @@ public class PromptTemplateService {
     private final ResourceLoader resourceLoader;
     private final ConcurrentMap<String, String> templateCache = new ConcurrentHashMap<>();
 
+    /**
+     * 构造 Prompt 模板服务。
+     *
+     * @param promptProperties Prompt 配置
+     * @param resourceLoader 资源加载器
+     */
     public PromptTemplateService(PromptProperties promptProperties, ResourceLoader resourceLoader) {
         this.promptProperties = promptProperties;
         this.resourceLoader = resourceLoader;
@@ -57,12 +62,23 @@ public class PromptTemplateService {
         return new PromptTemplate(template).render(safeVariables);
     }
 
+    /**
+     * 校验模板名称是否为空。
+     *
+     * @param templateName 模板名称
+     */
     private void validateTemplateName(String templateName) {
         if (!StringUtils.hasText(templateName)) {
             throw new IllegalArgumentException("Prompt 模板名称不能为空。");
         }
     }
 
+    /**
+     * 从类路径读取指定模板内容。
+     *
+     * @param templateName 模板名称
+     * @return 模板原文
+     */
     private String readTemplateContent(String templateName) {
         String resourcePath = promptProperties.getLocation() + templateName + ".md";
         Resource resource = resourceLoader.getResource(resourcePath);

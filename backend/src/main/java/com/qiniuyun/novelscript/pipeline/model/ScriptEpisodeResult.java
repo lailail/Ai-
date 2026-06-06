@@ -35,7 +35,7 @@ public class ScriptEpisodeResult {
     private List<String> sourceRefs = new ArrayList<>();
 
     /**
-     * 本集场景结果列表。
+     * 当前剧集的场景结果列表。
      */
     private List<ScriptSceneResult> scenes = new ArrayList<>();
 

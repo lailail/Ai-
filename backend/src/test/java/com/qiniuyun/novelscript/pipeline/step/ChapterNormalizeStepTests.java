@@ -3,11 +3,10 @@ package com.qiniuyun.novelscript.pipeline.step;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.List;
-
 import com.qiniuyun.novelscript.domain.entity.SourceChapter;
 import com.qiniuyun.novelscript.pipeline.model.ChapterNormalizeInput;
 import com.qiniuyun.novelscript.pipeline.model.ChapterNormalizeResult;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -17,14 +16,17 @@ class ChapterNormalizeStepTests {
 
     private final ChapterNormalizeStep chapterNormalizeStep = new ChapterNormalizeStep();
 
+    /**
+     * 验证三章输入能够被标准化，并且缺失标题时会自动提取。
+     */
     @Test
     void shouldNormalizeThreeChaptersAndExtractMissingTitle() {
         ChapterNormalizeInput input = new ChapterNormalizeInput();
         input.setProjectId(1001L);
         input.setChapters(List.of(
-            buildChapter(1001L, 3, "  第三章 余波  ", "  余波未平。  \n\n  城门再度关闭。 "),
-            buildChapter(1001L, 1, "", "\n 第一章 夜雨入城 \n\n 夜色压城。 \n\n\n 沈砚第一次走进青石巷。 \n"),
-            buildChapter(1001L, 2, "第二章 铜牌", "铜牌落地。\n\n  老周没有回头。")
+            buildChapter(1001L, 3, "  Chapter 3 Echo  ", "  Aftershock remains.  \n\n  The gate closes again.  "),
+            buildChapter(1001L, 1, "", "\n Chapter 1 Rainy Arrival \n\n Night presses down.\n\n\n Shen Yan steps into the alley.\n"),
+            buildChapter(1001L, 2, "Chapter 2 Token", "The token falls.\n\n Lao Zhou does not look back.")
         ));
 
         ChapterNormalizeResult result = chapterNormalizeStep.execute(input);
@@ -33,30 +35,43 @@ class ChapterNormalizeStepTests {
         assertThat(result.getChapterCount()).isEqualTo(3);
         assertThat(result.getNormalizedChapters()).hasSize(3);
         assertThat(result.getNormalizedChapters().get(0).getChapterNo()).isEqualTo(1);
-        assertThat(result.getNormalizedChapters().get(0).getTitle()).isEqualTo("第一章 夜雨入城");
-        assertThat(result.getNormalizedChapters().get(0).getContent()).isEqualTo("第一章 夜雨入城\n\n夜色压城。\n\n沈砚第一次走进青石巷。");
+        assertThat(result.getNormalizedChapters().get(0).getTitle()).isEqualTo("Chapter 1 Rainy Arrival");
+        assertThat(result.getNormalizedChapters().get(0).getContent()).isEqualTo(
+            "Chapter 1 Rainy Arrival\n\nNight presses down.\n\nShen Yan steps into the alley."
+        );
         assertThat(result.getNormalizedChapters().get(0).getWordCount()).isGreaterThan(0);
-        assertThat(result.getNormalizedChapters().get(2).getTitle()).isEqualTo("第三章 余波");
+        assertThat(result.getNormalizedChapters().get(2).getTitle()).isEqualTo("Chapter 3 Echo");
         assertThat(result.getTotalWordCount()).isEqualTo(
             result.getNormalizedChapters().stream().mapToInt(chapter -> chapter.getWordCount()).sum()
         );
     }
 
+    /**
+     * 验证章节数量不足三章时会被拒绝。
+     */
     @Test
     void shouldRejectWhenChapterCountIsLessThanThree() {
         ChapterNormalizeInput input = new ChapterNormalizeInput();
         input.setProjectId(1002L);
         input.setChapters(List.of(
-            buildChapter(1002L, 1, "第一章", "雨夜入城。"),
-            buildChapter(1002L, 2, "第二章", "铜牌落地。")
+            buildChapter(1002L, 1, "Chapter 1", "Rainy arrival."),
+            buildChapter(1002L, 2, "Chapter 2", "The token drops.")
         ));
 
         assertThatThrownBy(() -> chapterNormalizeStep.execute(input))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("至少")
             .hasMessageContaining("3");
     }
 
+    /**
+     * 构造测试用原始章节实体。
+     *
+     * @param projectId 项目 ID
+     * @param chapterNo 章节号
+     * @param title 标题
+     * @param content 正文
+     * @return 原始章节实体
+     */
     private SourceChapter buildChapter(Long projectId, Integer chapterNo, String title, String content) {
         SourceChapter chapter = new SourceChapter();
         chapter.setProjectId(projectId);

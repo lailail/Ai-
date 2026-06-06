@@ -6,13 +6,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qiniuyun.novelscript.ai.adapter.AiChatAdapter;
 import com.qiniuyun.novelscript.ai.prompt.PromptTemplateService;
 import com.qiniuyun.novelscript.pipeline.model.ChapterContextResult;
 import com.qiniuyun.novelscript.pipeline.model.NormalizedChapter;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +32,9 @@ class ChapterContextExtractStepTests {
 
     private ChapterContextExtractStep chapterContextExtractStep;
 
+    /**
+     * 初始化单章上下文抽取步骤实例。
+     */
     @BeforeEach
     void setUp() {
         chapterContextExtractStep = new ChapterContextExtractStep(
@@ -42,26 +44,29 @@ class ChapterContextExtractStepTests {
         );
     }
 
+    /**
+     * 验证模型返回完整 JSON 时可以正确解析为单章上下文。
+     */
     @Test
     void shouldExtractStructuredContextFromAiResponse() {
         NormalizedChapter normalizedChapter = new NormalizedChapter();
         normalizedChapter.setProjectId(1001L);
         normalizedChapter.setChapterNo(1);
-        normalizedChapter.setTitle("第一章 夜雨入城");
-        normalizedChapter.setContent("夜色压城。沈砚第一次走进青石巷。");
+        normalizedChapter.setTitle("Chapter 1 Rainy Arrival");
+        normalizedChapter.setContent("Night presses down. Shen Yan steps into the alley.");
         normalizedChapter.setWordCount(16);
 
-        when(promptTemplateService.render(eq("chapter-context-extract"), anyMap())).thenReturn("请分析这一章");
-        when(aiChatAdapter.chat(eq(ChapterContextExtractStep.SYSTEM_PROMPT), eq("请分析这一章"))).thenReturn("""
+        when(promptTemplateService.render(eq("chapter-context-extract"), anyMap())).thenReturn("analyze chapter");
+        when(aiChatAdapter.chat(eq(ChapterContextExtractStep.SYSTEM_PROMPT), eq("analyze chapter"))).thenReturn("""
             {
-              "summary": "沈砚雨夜入城，并在青石巷遇到可疑线索。",
-              "characters": ["沈砚", "老周"],
-              "locations": ["青石巷"],
-              "events": ["沈砚入城", "发现异常动静"],
-              "conflicts": ["是否继续追查"],
-              "emotion_changes": ["警惕到犹疑"],
-              "foreshadowing": ["巷口的铜牌"],
-              "key_dialogues": ["老周：别回头。"],
+              "summary": "Shen Yan enters the old town at night and notices something unusual.",
+              "characters": ["Shen Yan", "Lao Zhou"],
+              "locations": ["Stone Alley"],
+              "events": ["Shen Yan enters town", "He spots unusual movement"],
+              "conflicts": ["Should he keep investigating"],
+              "emotion_changes": ["From alert to suspicious"],
+              "foreshadowing": ["A bronze token at the alley entrance"],
+              "key_dialogues": ["Lao Zhou: Do not look back."],
               "source_refs": ["chapter:1"]
             }
             """);
@@ -70,44 +75,47 @@ class ChapterContextExtractStepTests {
 
         assertThat(result.getProjectId()).isEqualTo(1001L);
         assertThat(result.getChapterNo()).isEqualTo(1);
-        assertThat(result.getChapterTitle()).isEqualTo("第一章 夜雨入城");
-        assertThat(result.getSummary()).contains("沈砚雨夜入城");
-        assertThat(result.getCharacters()).containsExactly("沈砚", "老周");
-        assertThat(result.getLocations()).containsExactly("青石巷");
-        assertThat(result.getEvents()).contains("沈砚入城");
-        assertThat(result.getConflicts()).contains("是否继续追查");
-        assertThat(result.getEmotionChanges()).contains("警惕到犹疑");
-        assertThat(result.getForeshadowing()).contains("巷口的铜牌");
-        assertThat(result.getKeyDialogues()).contains("老周：别回头。");
+        assertThat(result.getChapterTitle()).isEqualTo("Chapter 1 Rainy Arrival");
+        assertThat(result.getSummary()).contains("Shen Yan enters");
+        assertThat(result.getCharacters()).containsExactly("Shen Yan", "Lao Zhou");
+        assertThat(result.getLocations()).containsExactly("Stone Alley");
+        assertThat(result.getEvents()).contains("Shen Yan enters town");
+        assertThat(result.getConflicts()).contains("Should he keep investigating");
+        assertThat(result.getEmotionChanges()).contains("From alert to suspicious");
+        assertThat(result.getForeshadowing()).contains("A bronze token at the alley entrance");
+        assertThat(result.getKeyDialogues()).contains("Lao Zhou: Do not look back.");
         assertThat(result.getSourceRefs()).containsExactly("chapter:1");
 
         verify(promptTemplateService).render(eq("chapter-context-extract"), anyMap());
-        verify(aiChatAdapter).chat(eq(ChapterContextExtractStep.SYSTEM_PROMPT), eq("请分析这一章"));
+        verify(aiChatAdapter).chat(eq(ChapterContextExtractStep.SYSTEM_PROMPT), eq("analyze chapter"));
     }
 
+    /**
+     * 验证模型未返回 source_refs 时会自动补齐默认章节引用。
+     */
     @Test
     void shouldFillDefaultSourceRefWhenAiResponseDoesNotReturnSourceRefs() {
         NormalizedChapter normalizedChapter = new NormalizedChapter();
         normalizedChapter.setProjectId(1002L);
         normalizedChapter.setChapterNo(2);
-        normalizedChapter.setTitle("第二章 铜牌");
-        normalizedChapter.setContent("铜牌落地，老周没有回头。");
+        normalizedChapter.setTitle("Chapter 2 Token");
+        normalizedChapter.setContent("The token falls and Lao Zhou does not look back.");
         normalizedChapter.setWordCount(13);
 
-        when(promptTemplateService.render(eq("chapter-context-extract"), anyMap())).thenReturn("请分析第二章");
-        when(aiChatAdapter.chat(eq(ChapterContextExtractStep.SYSTEM_PROMPT), eq("请分析第二章"))).thenReturn("""
+        when(promptTemplateService.render(eq("chapter-context-extract"), anyMap())).thenReturn("analyze second chapter");
+        when(aiChatAdapter.chat(eq(ChapterContextExtractStep.SYSTEM_PROMPT), eq("analyze second chapter"))).thenReturn("""
             {
-              "summary": "铜牌出现，疑点加深。",
-              "characters": ["老周"],
-              "locations": ["旧巷"]
+              "summary": "The token appears and the mystery deepens.",
+              "characters": ["Lao Zhou"],
+              "locations": ["Old Alley"]
             }
             """);
 
         ChapterContextResult result = chapterContextExtractStep.execute(normalizedChapter);
 
         assertThat(result.getSourceRefs()).containsExactly("chapter:2");
-        assertThat(result.getCharacters()).containsExactly("老周");
-        assertThat(result.getLocations()).containsExactly("旧巷");
+        assertThat(result.getCharacters()).containsExactly("Lao Zhou");
+        assertThat(result.getLocations()).containsExactly("Old Alley");
         assertThat(result.getEvents()).isEqualTo(List.of());
     }
 }
