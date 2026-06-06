@@ -10,12 +10,12 @@
 3. 角色 ID、地点 ID、事件 ID、冲突 ID、伏笔 ID 应尽量稳定、可引用。
 4. JSON 只保留以下字段：
    `characters`、`relationships`、`locations`、`timeline`、`conflicts`、`foreshadowing`、`adaptation_strategy`
-5. 其中字段结构要求如下：
-   `characters`: `[{id,name,aliases,role,traits,goal}]`
-   `relationships`: `[{from,to,type,description}]`
-   `locations`: `[{id,name,description}]`
-   `timeline`: `[{id,order,summary,source_refs}]`
-   `conflicts`: `[{id,summary}]`
-   `foreshadowing`: `[{id,setup,payoff_hint,source_refs}]`
-   `adaptation_strategy`: 字符串数组
+5. 字段结构要求如下：
+   `characters`：数组，每项包含 `id`、`name`、`aliases`、`role`、`traits`、`goal`
+   `relationships`：数组，每项包含 `from`、`to`、`type`、`description`
+   `locations`：数组，每项包含 `id`、`name`、`description`
+   `timeline`：数组，每项包含 `id`、`order`、`summary`、`source_refs`
+   `conflicts`：数组，每项包含 `id`、`summary`
+   `foreshadowing`：数组，每项包含 `id`、`setup`、`payoff_hint`、`source_refs`
+   `adaptation_strategy`：字符串数组
 6. 所有列表字段必须返回数组；没有内容时返回空数组。
