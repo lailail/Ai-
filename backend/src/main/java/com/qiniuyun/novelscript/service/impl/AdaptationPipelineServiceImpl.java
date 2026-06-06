@@ -2,11 +2,13 @@ package com.qiniuyun.novelscript.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qiniuyun.novelscript.common.exception.ResourceNotFoundException;
 import com.qiniuyun.novelscript.config.adaptation.AdaptationExecutionProperties;
 import com.qiniuyun.novelscript.controller.response.AdaptationJobResponse;
 import com.qiniuyun.novelscript.controller.response.AdaptationScriptResponse;
+import com.qiniuyun.novelscript.controller.response.ScriptValidationErrorResponse;
 import com.qiniuyun.novelscript.domain.entity.AdaptationJob;
 import com.qiniuyun.novelscript.domain.entity.ChapterContext;
 import com.qiniuyun.novelscript.domain.entity.Project;
@@ -226,7 +228,13 @@ public class AdaptationPipelineServiceImpl implements AdaptationPipelineService 
         }
 
         log.info("【改编编排】查询最新剧本成功，项目ID：{}，版本号：{}", projectId, scriptVersion.getVersionNo());
-        return AdaptationScriptResponse.from(projectId, scriptVersion, yamlSnapshot, null);
+        return AdaptationScriptResponse.from(
+            projectId,
+            scriptVersion,
+            yamlSnapshot,
+            null,
+            parseValidationErrors(yamlSnapshot.getValidationErrors())
+        );
     }
 
     /**
@@ -691,7 +699,13 @@ public class AdaptationPipelineServiceImpl implements AdaptationPipelineService 
         yamlSnapshotMapper.insert(yamlSnapshot);
 
         log.info("【改编编排】剧本版本保存完成，项目ID：{}，版本号：{}", project.getId(), scriptVersion.getVersionNo());
-        return AdaptationScriptResponse.from(project.getId(), scriptVersion, yamlSnapshot, null);
+        return AdaptationScriptResponse.from(
+            project.getId(),
+            scriptVersion,
+            yamlSnapshot,
+            null,
+            validationResult.getErrors().stream().map(ScriptValidationErrorResponse::from).toList()
+        );
     }
 
     /**
@@ -749,6 +763,29 @@ public class AdaptationPipelineServiceImpl implements AdaptationPipelineService 
      */
     private String formatValidationError(SchemaValidationError error) {
         return error.getPath() + ": " + error.getMessage();
+    }
+
+    /**
+     * 解析落库保存的 YAML 校验错误 JSON。
+     *
+     * @param validationErrorsJson 落库的校验错误 JSON
+     * @return 面向前端的结构化错误列表
+     */
+    private List<ScriptValidationErrorResponse> parseValidationErrors(String validationErrorsJson) {
+        if (!StringUtils.hasText(validationErrorsJson)) {
+            return List.of();
+        }
+
+        try {
+            List<SchemaValidationError> errors = objectMapper.readValue(
+                validationErrorsJson,
+                new TypeReference<List<SchemaValidationError>>() { }
+            );
+            return errors.stream().map(ScriptValidationErrorResponse::from).toList();
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalStateException("剧本校验错误反序列化失败。", exception);
+        }
     }
 
     /**

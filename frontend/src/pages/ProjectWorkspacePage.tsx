@@ -9,11 +9,19 @@ import {
   getLatestProjectScript,
   getLatestStoryBible,
   getProject,
-  listProjectChapters
+  getProjectScriptVersion,
+  listProjectChapters,
+  listProjectScriptVersions,
+  saveProjectScriptVersion,
+  validateProjectScript
 } from "../api/projects";
 import { AdaptationStatusPanel } from "../components/workspace/AdaptationStatusPanel";
 import { ScriptPreviewPanel } from "../components/workspace/ScriptPreviewPanel";
 import { StoryBiblePanel } from "../components/workspace/StoryBiblePanel";
+import type {
+  AdaptationScript,
+  ScriptValidationResult
+} from "../types/adaptation";
 import type { CreateChapterPayload } from "../types/project";
 import { getNextChapterNo } from "../utils/chapter";
 import { saveRecentProjectId } from "../utils/recent-projects";
@@ -31,50 +39,71 @@ const TAB_KEYS = {
   yaml: "yaml"
 } as const;
 
+/**
+ * 承载单个小说项目工作台的主页面。
+ */
 export function ProjectWorkspacePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { projectId } = useParams();
   const numericProjectId = Number(projectId);
+  const isValidProjectId = Number.isInteger(numericProjectId) && numericProjectId > 0;
   const [form] = Form.useForm<ChapterFormValues>();
   const [activeTab, setActiveTab] = useState<string>(TAB_KEYS.chapters);
   const [watchingJobId, setWatchingJobId] = useState<number | null>(null);
+  const [selectedScriptVersionId, setSelectedScriptVersionId] = useState<number | null>(null);
+  const [draftSourceVersionId, setDraftSourceVersionId] = useState<number | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftYamlContent, setDraftYamlContent] = useState("");
+  const [validationResult, setValidationResult] = useState<ScriptValidationResult | null>(null);
 
   useEffect(() => {
-    if (Number.isInteger(numericProjectId) && numericProjectId > 0) {
+    if (isValidProjectId) {
       saveRecentProjectId(numericProjectId);
     }
-  }, [numericProjectId]);
+  }, [isValidProjectId, numericProjectId]);
 
   const projectQuery = useQuery({
     queryKey: ["project", numericProjectId],
     queryFn: () => getProject(numericProjectId),
-    enabled: Number.isInteger(numericProjectId) && numericProjectId > 0
+    enabled: isValidProjectId
   });
 
   const chaptersQuery = useQuery({
     queryKey: ["project-chapters", numericProjectId],
     queryFn: () => listProjectChapters(numericProjectId),
-    enabled: Number.isInteger(numericProjectId) && numericProjectId > 0
+    enabled: isValidProjectId
   });
 
   const latestJobQuery = useQuery({
     queryKey: ["project-latest-job", numericProjectId],
     queryFn: () => getLatestAdaptationJob(numericProjectId),
-    enabled: Number.isInteger(numericProjectId) && numericProjectId > 0,
+    enabled: isValidProjectId,
     refetchInterval: (query) => (query.state.data?.status === "RUNNING" ? 1500 : false)
   });
 
   const latestScriptQuery = useQuery({
     queryKey: ["project-latest-script", numericProjectId],
     queryFn: () => getLatestProjectScript(numericProjectId),
-    enabled: Number.isInteger(numericProjectId) && numericProjectId > 0
+    enabled: isValidProjectId
   });
 
   const latestStoryBibleQuery = useQuery({
     queryKey: ["project-latest-story-bible", numericProjectId],
     queryFn: () => getLatestStoryBible(numericProjectId),
-    enabled: Number.isInteger(numericProjectId) && numericProjectId > 0
+    enabled: isValidProjectId
+  });
+
+  const scriptVersionsQuery = useQuery({
+    queryKey: ["project-script-versions", numericProjectId],
+    queryFn: () => listProjectScriptVersions(numericProjectId),
+    enabled: isValidProjectId
+  });
+
+  const selectedScriptQuery = useQuery({
+    queryKey: ["project-script-version", numericProjectId, selectedScriptVersionId],
+    queryFn: () => getProjectScriptVersion(numericProjectId, selectedScriptVersionId as number),
+    enabled: isValidProjectId && selectedScriptVersionId !== null
   });
 
   useEffect(() => {
@@ -86,6 +115,32 @@ export function ProjectWorkspacePage() {
   }, [chaptersQuery.data, form]);
 
   useEffect(() => {
+    const versionSummaries = scriptVersionsQuery.data ?? [];
+    if (versionSummaries.length === 0) {
+      setSelectedScriptVersionId(null);
+      return;
+    }
+
+    const stillExists = versionSummaries.some((item) => item.scriptVersionId === selectedScriptVersionId);
+    if (!stillExists) {
+      setSelectedScriptVersionId(versionSummaries[0].scriptVersionId);
+      setDraftSourceVersionId(null);
+    }
+  }, [scriptVersionsQuery.data, selectedScriptVersionId]);
+
+  useEffect(() => {
+    const selectedScript = selectedScriptQuery.data;
+    if (!selectedScript || draftSourceVersionId === selectedScript.scriptVersionId) {
+      return;
+    }
+
+    setDraftSourceVersionId(selectedScript.scriptVersionId);
+    setDraftTitle(selectedScript.title);
+    setDraftYamlContent(selectedScript.yamlContent);
+    setValidationResult(buildValidationResultFromScript(selectedScript));
+  }, [draftSourceVersionId, selectedScriptQuery.data]);
+
+  useEffect(() => {
     if (!watchingJobId || !latestJobQuery.data || latestJobQuery.data.jobId !== watchingJobId) {
       return;
     }
@@ -93,9 +148,10 @@ export function ProjectWorkspacePage() {
     if (latestJobQuery.data.status === "SUCCEEDED") {
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ["project-latest-script", numericProjectId] }),
-        queryClient.invalidateQueries({ queryKey: ["project-latest-story-bible", numericProjectId] })
+        queryClient.invalidateQueries({ queryKey: ["project-latest-story-bible", numericProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-script-versions", numericProjectId] })
       ]);
-      message.success("改编完成，最新 Story Bible 和 YAML 初稿已刷新。");
+      message.success("改编完成，最新 Story Bible 与 YAML 工作区已刷新。");
       setWatchingJobId(null);
     }
 
@@ -130,19 +186,64 @@ export function ProjectWorkspacePage() {
       if (job.status === "SUCCEEDED") {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["project-latest-script", numericProjectId] }),
-          queryClient.invalidateQueries({ queryKey: ["project-latest-story-bible", numericProjectId] })
+          queryClient.invalidateQueries({ queryKey: ["project-latest-story-bible", numericProjectId] }),
+          queryClient.invalidateQueries({ queryKey: ["project-script-versions", numericProjectId] })
         ]);
         message.success("改编完成，已生成最新剧本初稿。");
         return;
       }
 
       setWatchingJobId(job.jobId);
-      message.success("改编任务已启动，正在后台生成。");
+      message.success("改编任务已启动，正在后台分阶段生成。");
     },
     onError: (error: Error) => {
       message.error(error.message);
     }
   });
+
+  const validateScriptMutation = useMutation({
+    mutationFn: () => validateProjectScript(numericProjectId, draftYamlContent),
+    onSuccess: (result) => {
+      setValidationResult(result);
+      if (result.valid) {
+        message.success("YAML 校验通过。");
+        return;
+      }
+      message.warning(`YAML 校验未通过，共发现 ${result.errors.length} 个问题。`);
+    },
+    onError: (error: Error) => {
+      message.error(error.message);
+    }
+  });
+
+  const saveScriptVersionMutation = useMutation({
+    mutationFn: () => saveProjectScriptVersion(numericProjectId, draftTitle, draftYamlContent),
+    onSuccess: async (script) => {
+      setSelectedScriptVersionId(script.scriptVersionId);
+      setDraftSourceVersionId(null);
+      setValidationResult(buildValidationResultFromScript(script));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["project-script-versions", numericProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-script-version", numericProjectId, script.scriptVersionId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-latest-script", numericProjectId] })
+      ]);
+
+      if (script.validationStatus === "PASSED") {
+        message.success(`新版本已保存：第 ${script.versionNo} 版。`);
+        return;
+      }
+      message.warning(`新版本已保存为第 ${script.versionNo} 版，但当前 YAML 仍未通过校验。`);
+    },
+    onError: (error: Error) => {
+      message.error(error.message);
+    }
+  });
+
+  const selectedScript = selectedScriptQuery.data ?? null;
+  const hasUnsavedChanges = Boolean(
+    selectedScript &&
+      (draftTitle !== selectedScript.title || draftYamlContent !== selectedScript.yamlContent)
+  );
 
   const chapterTabContent = useMemo(() => {
     const chapters = chaptersQuery.data ?? [];
@@ -208,7 +309,7 @@ export function ProjectWorkspacePage() {
     );
   }, [chaptersQuery.data, createChapterMutation, form]);
 
-  if (!Number.isInteger(numericProjectId) || numericProjectId <= 0) {
+  if (!isValidProjectId) {
     return (
       <main className="page-shell">
         <div className="panel">
@@ -290,6 +391,16 @@ export function ProjectWorkspacePage() {
         />
       ) : null}
 
+      {scriptVersionsQuery.isError ? (
+        <Alert
+          className="workspace-alert"
+          type="error"
+          showIcon
+          message="剧本版本列表查询失败"
+          description={scriptVersionsQuery.error instanceof Error ? scriptVersionsQuery.error.message : "请稍后重试。"}
+        />
+      ) : null}
+
       <section className="workspace-tabs-shell">
         <Tabs
           activeKey={activeTab}
@@ -330,8 +441,27 @@ export function ProjectWorkspacePage() {
               label: "YAML 初稿",
               children: (
                 <ScriptPreviewPanel
-                  latestScript={latestScriptQuery.data ?? null}
-                  isLoading={latestScriptQuery.isLoading}
+                  versionSummaries={scriptVersionsQuery.data ?? []}
+                  selectedScript={selectedScript}
+                  draftTitle={draftTitle}
+                  draftYamlContent={draftYamlContent}
+                  validationResult={validationResult}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  isListLoading={scriptVersionsQuery.isLoading}
+                  isDetailLoading={selectedScriptQuery.isLoading}
+                  isValidating={validateScriptMutation.isPending}
+                  isSaving={saveScriptVersionMutation.isPending}
+                  onSelectVersion={(scriptVersionId) => {
+                    setSelectedScriptVersionId(scriptVersionId);
+                    setDraftSourceVersionId(null);
+                  }}
+                  onDraftTitleChange={setDraftTitle}
+                  onDraftYamlChange={(value) => {
+                    setDraftYamlContent(value);
+                    setValidationResult(null);
+                  }}
+                  onValidate={() => validateScriptMutation.mutate()}
+                  onSave={() => saveScriptVersionMutation.mutate()}
                 />
               )
             }
@@ -340,4 +470,32 @@ export function ProjectWorkspacePage() {
       </section>
     </main>
   );
+}
+
+/**
+ * 根据当前剧本版本详情生成界面需要的校验结果快照。
+ *
+ * @param script 剧本版本详情
+ * @returns 可直接展示的校验结果；若无明确信息则返回空
+ */
+function buildValidationResultFromScript(script: AdaptationScript): ScriptValidationResult | null {
+  if (script.validationStatus === "PASSED") {
+    return {
+      projectId: script.projectId,
+      schemaVersion: script.schemaVersion,
+      valid: true,
+      errors: []
+    };
+  }
+
+  if (script.validationErrors.length > 0) {
+    return {
+      projectId: script.projectId,
+      schemaVersion: script.schemaVersion,
+      valid: false,
+      errors: script.validationErrors
+    };
+  }
+
+  return null;
 }

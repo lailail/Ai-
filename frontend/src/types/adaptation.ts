@@ -18,11 +18,38 @@ export interface AdaptationScript {
   scriptVersionId: number;
   versionNo: number;
   title: string;
+  sourceType: string;
   schemaVersion: string;
   validationStatus: string;
   yamlContent: string;
+  validationErrors: ScriptValidationError[];
+  createdAt: string;
   jobId: number | null;
   jobStatus: string | null;
+}
+
+export interface ScriptValidationError {
+  path: string;
+  message: string;
+  rejectedValue?: string | null;
+}
+
+export interface ScriptValidationResult {
+  projectId: number;
+  schemaVersion: string;
+  valid: boolean;
+  errors: ScriptValidationError[];
+}
+
+export interface ScriptVersionSummary {
+  projectId: number;
+  scriptVersionId: number;
+  versionNo: number;
+  title: string;
+  sourceType: string;
+  validationStatus: string | null;
+  latest: boolean;
+  createdAt: string;
 }
 
 export interface StoryBibleCharacter {

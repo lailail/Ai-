@@ -74,9 +74,12 @@ describe("AdaptationStatusPanel", () => {
           scriptVersionId: 11,
           versionNo: 2,
           title: "长夜余烬 - 旧城疑影",
+          sourceType: "AI_GENERATED",
           schemaVersion: "1.0",
           validationStatus: "PASSED",
           yamlContent: "schema_version: 1.0",
+          validationErrors: [],
+          createdAt: "2026-06-06T20:31:00",
           jobId: 9,
           jobStatus: "SUCCEEDED"
         }}
