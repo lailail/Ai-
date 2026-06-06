@@ -31,6 +31,9 @@ class StoryBibleBuildStepTests {
 
     private StoryBibleBuildStep storyBibleBuildStep;
 
+    /**
+     * 初始化 Story Bible 构建步骤实例。
+     */
     @BeforeEach
     void setUp() {
         storyBibleBuildStep = new StoryBibleBuildStep(
@@ -40,19 +43,22 @@ class StoryBibleBuildStepTests {
         );
     }
 
+    /**
+     * 验证全局上下文可以被正确解析为 Story Bible 结构。
+     */
     @Test
     void test_p3_c3_story_bible_build() {
-        when(promptTemplateService.render(eq("story-bible-build"), anyMap())).thenReturn("请构建 Story Bible");
-        when(aiChatAdapter.chat(eq(StoryBibleBuildStep.SYSTEM_PROMPT), eq("请构建 Story Bible"))).thenReturn("""
+        when(promptTemplateService.render(eq("story-bible-build"), anyMap())).thenReturn("build story bible");
+        when(aiChatAdapter.chat(eq(StoryBibleBuildStep.SYSTEM_PROMPT), eq("build story bible"))).thenReturn("""
             {
               "characters": [
                 {
                   "id": "char_shenyan",
-                  "name": "沈砚",
-                  "aliases": ["小沈"],
+                  "name": "Shen Yan",
+                  "aliases": ["Xiao Shen"],
                   "role": "protagonist",
-                  "traits": ["冷静", "敏锐"],
-                  "goal": "查明旧案真相"
+                  "traits": ["calm", "sharp"],
+                  "goal": "Find the truth of the old case"
                 }
               ],
               "relationships": [
@@ -60,39 +66,39 @@ class StoryBibleBuildStepTests {
                   "from": "char_shenyan",
                   "to": "char_linwan",
                   "type": "ally",
-                  "description": "两人因旧案暂时结盟"
+                  "description": "They temporarily work together because of the old case"
                 }
               ],
               "locations": [
                 {
-                  "id": "loc_qingshi",
-                  "name": "青石巷",
-                  "description": "旧城深处的狭窄巷道"
+                  "id": "loc_stone_alley",
+                  "name": "Stone Alley",
+                  "description": "A narrow alley deep inside the old town"
                 }
               ],
               "timeline": [
                 {
                   "id": "evt_001",
                   "order": 1,
-                  "summary": "沈砚雨夜入城",
+                  "summary": "Shen Yan enters town on a rainy night",
                   "source_refs": ["chapter:1"]
                 }
               ],
               "conflicts": [
                 {
                   "id": "conf_001",
-                  "summary": "继续追查会触怒隐藏势力"
+                  "summary": "Further investigation may anger hidden forces"
                 }
               ],
               "foreshadowing": [
                 {
                   "id": "foreshadow_001",
-                  "setup": "铜牌反复出现",
-                  "payoff_hint": "指向幕后身份",
+                  "setup": "The bronze token keeps reappearing",
+                  "payoff_hint": "It points to the person behind the scenes",
                   "source_refs": ["chapter:2"]
                 }
               ],
-              "adaptation_strategy": ["前3章压缩为开篇一集", "保留旧城悬疑基调"]
+              "adaptation_strategy": ["Compress the first three chapters into episode one", "Keep the old town suspense tone"]
             }
             """);
 
@@ -100,28 +106,36 @@ class StoryBibleBuildStepTests {
 
         assertThat(result.getProjectId()).isEqualTo(1001L);
         assertThat(result.getCharacters()).hasSize(1);
-        assertThat(result.getCharacters().get(0).getName()).isEqualTo("沈砚");
+        assertThat(result.getCharacters().get(0).getName()).isEqualTo("Shen Yan");
         assertThat(result.getRelationships()).hasSize(1);
         assertThat(result.getLocations()).hasSize(1);
         assertThat(result.getTimeline()).hasSize(1);
         assertThat(result.getTimeline().get(0).getSourceRefs()).containsExactly("chapter:1");
         assertThat(result.getConflicts()).hasSize(1);
         assertThat(result.getForeshadowing()).hasSize(1);
-        assertThat(result.getAdaptationStrategy()).containsExactly("前3章压缩为开篇一集", "保留旧城悬疑基调");
+        assertThat(result.getAdaptationStrategy()).containsExactly(
+            "Compress the first three chapters into episode one",
+            "Keep the old town suspense tone"
+        );
 
         verify(promptTemplateService).render(eq("story-bible-build"), anyMap());
-        verify(aiChatAdapter).chat(eq(StoryBibleBuildStep.SYSTEM_PROMPT), eq("请构建 Story Bible"));
+        verify(aiChatAdapter).chat(eq(StoryBibleBuildStep.SYSTEM_PROMPT), eq("build story bible"));
     }
 
+    /**
+     * 构造测试用全局上下文结果。
+     *
+     * @return 全局上下文结果
+     */
     private GlobalContextMergeResult buildGlobalContext() {
         GlobalContextMergeResult result = new GlobalContextMergeResult();
         result.setProjectId(1001L);
-        result.setSummary("沈砚沿着铜牌线索追查旧案。");
-        result.setCharacters(java.util.List.of("沈砚", "林晚", "老周"));
-        result.setLocations(java.util.List.of("青石巷", "旧城码头"));
-        result.setTimeline(java.util.List.of("沈砚入城", "发现铜牌"));
-        result.setRelationships(java.util.List.of("沈砚与林晚形成临时同盟"));
-        result.setConflicts(java.util.List.of("是否继续追查旧案"));
+        result.setSummary("Shen Yan follows the token clue to investigate the old case.");
+        result.setCharacters(java.util.List.of("Shen Yan", "Lin Wan", "Lao Zhou"));
+        result.setLocations(java.util.List.of("Stone Alley", "Old Wharf"));
+        result.setTimeline(java.util.List.of("Shen Yan enters town", "The bronze token appears"));
+        result.setRelationships(java.util.List.of("Shen Yan and Lin Wan form a temporary alliance"));
+        result.setConflicts(java.util.List.of("Should he continue the old case investigation"));
         result.setSourceContextRefs(java.util.List.of("chapter:1", "chapter:2", "chapter:3"));
         return result;
     }

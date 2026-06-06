@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * 验证项目与章节最小接口可用的集成测试。
+ * 验证项目与章节最小接口可用性的集成测试。
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,6 +30,9 @@ class ProjectApiIntegrationTests {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * 验证健康检查接口可正常返回。
+     */
     @Test
     void shouldReturnHealthStatus() throws Exception {
         mockMvc.perform(get("/api/health"))
@@ -38,6 +41,9 @@ class ProjectApiIntegrationTests {
             .andExpect(jsonPath("$.data.status").value("UP"));
     }
 
+    /**
+     * 验证项目创建、章节保存与项目详情查询链路。
+     */
     @Test
     void shouldCreateProjectAndSaveChapter() throws Exception {
         MvcResult projectResult = mockMvc.perform(
@@ -80,6 +86,9 @@ class ProjectApiIntegrationTests {
             .andExpect(jsonPath("$.data.chapterCount").value(1));
     }
 
+    /**
+     * 验证项目列表与章节列表接口可返回最新录入数据。
+     */
     @Test
     void test_pr4_1_list_projects_and_chapters() throws Exception {
         MvcResult projectResult = mockMvc.perform(
@@ -127,7 +136,7 @@ class ProjectApiIntegrationTests {
     /**
      * 从创建项目响应中提取项目 ID。
      *
-     * @param result 创建项目的响应结果
+     * @param result 创建项目后的响应结果
      * @return 项目 ID
      * @throws Exception 当解析响应失败时抛出
      */

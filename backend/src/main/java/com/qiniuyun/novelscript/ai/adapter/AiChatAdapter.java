@@ -6,7 +6,7 @@ package com.qiniuyun.novelscript.ai.adapter;
 public interface AiChatAdapter {
 
     /**
-     * 使用系统提示和用户提示发起一次文本生成。
+     * 使用系统提示词和用户提示词发起一次文本生成。
      *
      * @param systemPrompt 系统提示词
      * @param userPrompt 用户提示词

@@ -23,6 +23,12 @@ logging:
     com.qiniuyun.novelscript: info
 
 novel-script:
+  adaptation:
+    async-enabled: true
+    core-pool-size: 2
+    max-pool-size: 4
+    queue-capacity: 8
+    thread-name-prefix: adaptation-
   ai:
     deepseek:
       enabled: true

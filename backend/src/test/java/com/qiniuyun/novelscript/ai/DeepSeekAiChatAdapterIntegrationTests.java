@@ -20,6 +20,9 @@ class DeepSeekAiChatAdapterIntegrationTests {
     @Autowired
     private AiChatAdapter aiChatAdapter;
 
+    /**
+     * 验证存在有效 API Key 时可以成功调用 DeepSeek。
+     */
     @Test
     void shouldCallDeepSeekSuccessfullyWhenApiKeyIsConfigured() {
         String result = aiChatAdapter.chat(

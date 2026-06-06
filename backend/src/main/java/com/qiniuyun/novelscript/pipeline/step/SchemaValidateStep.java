@@ -6,7 +6,6 @@ import com.qiniuyun.novelscript.pipeline.model.SchemaValidationError;
 import com.qiniuyun.novelscript.pipeline.model.SchemaValidationResult;
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -19,6 +18,9 @@ public class SchemaValidateStep {
 
     private final YAMLMapper yamlMapper;
 
+    /**
+     * 构造 YAML Schema 校验步骤。
+     */
     public SchemaValidateStep() {
         this.yamlMapper = YAMLMapper.builder().findAndAddModules().build();
     }
@@ -50,12 +52,23 @@ public class SchemaValidateStep {
         validateRequiredText(rootNode, "schema_version", result);
         validateProject(rootNode.path("project"), result);
         validateStoryBible(rootNode.path("story_bible"), result);
-        validateEpisodes(rootNode.path("episodes"), rootNode.path("project").path("source_chapters"), rootNode.path("story_bible").path("characters"), result);
+        validateEpisodes(
+            rootNode.path("episodes"),
+            rootNode.path("project").path("source_chapters"),
+            rootNode.path("story_bible").path("characters"),
+            result
+        );
         validateMetadata(rootNode.path("metadata"), result);
         result.setValid(result.getErrors().isEmpty());
         return result;
     }
 
+    /**
+     * 校验项目顶层节点。
+     *
+     * @param projectNode 项目节点
+     * @param result 校验结果
+     */
     private void validateProject(JsonNode projectNode, SchemaValidationResult result) {
         if (projectNode.isMissingNode() || projectNode.isNull()) {
             result.getErrors().add(new SchemaValidationError("project", "project 为必填字段。"));
@@ -64,12 +77,26 @@ public class SchemaValidateStep {
         validateRequiredText(projectNode, "title", result, "project.title");
     }
 
+    /**
+     * 校验 Story Bible 顶层节点。
+     *
+     * @param storyBibleNode Story Bible 节点
+     * @param result 校验结果
+     */
     private void validateStoryBible(JsonNode storyBibleNode, SchemaValidationResult result) {
         if (storyBibleNode.isMissingNode() || storyBibleNode.isNull()) {
             result.getErrors().add(new SchemaValidationError("story_bible", "story_bible 为必填字段。"));
         }
     }
 
+    /**
+     * 校验剧集和场景结构。
+     *
+     * @param episodesNode 剧集节点
+     * @param sourceChaptersNode 原始章节节点
+     * @param storyCharactersNode Story Bible 角色节点
+     * @param result 校验结果
+     */
     private void validateEpisodes(
         JsonNode episodesNode,
         JsonNode sourceChaptersNode,
@@ -106,6 +133,12 @@ public class SchemaValidateStep {
         }
     }
 
+    /**
+     * 校验元数据节点。
+     *
+     * @param metadataNode 元数据节点
+     * @param result 校验结果
+     */
     private void validateMetadata(JsonNode metadataNode, SchemaValidationResult result) {
         if (metadataNode.isMissingNode() || metadataNode.isNull()) {
             result.getErrors().add(new SchemaValidationError("metadata", "metadata 为必填字段。"));
@@ -114,6 +147,14 @@ public class SchemaValidateStep {
         validateRequiredText(metadataNode, "generator", result, "metadata.generator");
     }
 
+    /**
+     * 校验来源章节引用是否合法。
+     *
+     * @param sourceRefsNode 来源引用节点
+     * @param validChapterRefs 合法章节引用集合
+     * @param path 当前错误路径
+     * @param result 校验结果
+     */
     private void validateSourceRefs(
         JsonNode sourceRefsNode,
         Set<String> validChapterRefs,
@@ -133,6 +174,14 @@ public class SchemaValidateStep {
         }
     }
 
+    /**
+     * 校验场景角色引用是否合法。
+     *
+     * @param charactersNode 角色引用节点
+     * @param validCharacterIds 合法角色 ID 集合
+     * @param path 当前错误路径
+     * @param result 校验结果
+     */
     private void validateCharacters(
         JsonNode charactersNode,
         Set<String> validCharacterIds,
@@ -151,6 +200,14 @@ public class SchemaValidateStep {
         }
     }
 
+    /**
+     * 校验对白结构及角色引用是否合法。
+     *
+     * @param dialogueNode 对白节点
+     * @param validCharacterIds 合法角色 ID 集合
+     * @param path 当前错误路径
+     * @param result 校验结果
+     */
     private void validateDialogue(
         JsonNode dialogueNode,
         Set<String> validCharacterIds,
@@ -172,6 +229,12 @@ public class SchemaValidateStep {
         }
     }
 
+    /**
+     * 收集 Story Bible 中定义的角色 ID。
+     *
+     * @param storyCharactersNode Story Bible 角色节点
+     * @return 合法角色 ID 集合
+     */
     private Set<String> collectCharacterIds(JsonNode storyCharactersNode) {
         Set<String> characterIds = new HashSet<>();
         if (!storyCharactersNode.isArray()) {
@@ -187,6 +250,12 @@ public class SchemaValidateStep {
         return characterIds;
     }
 
+    /**
+     * 根据项目章节号收集合法的章节引用格式。
+     *
+     * @param sourceChaptersNode 原始章节节点
+     * @return 合法章节引用集合
+     */
     private Set<String> collectChapterRefs(JsonNode sourceChaptersNode) {
         Set<String> chapterRefs = new HashSet<>();
         if (!sourceChaptersNode.isArray()) {
@@ -199,10 +268,25 @@ public class SchemaValidateStep {
         return chapterRefs;
     }
 
+    /**
+     * 校验默认路径下的必填文本字段。
+     *
+     * @param parentNode 父节点
+     * @param fieldName 字段名
+     * @param result 校验结果
+     */
     private void validateRequiredText(JsonNode parentNode, String fieldName, SchemaValidationResult result) {
         validateRequiredText(parentNode, fieldName, result, fieldName);
     }
 
+    /**
+     * 校验指定路径下的必填文本字段。
+     *
+     * @param parentNode 父节点
+     * @param fieldName 字段名
+     * @param result 校验结果
+     * @param path 当前错误路径
+     */
     private void validateRequiredText(
         JsonNode parentNode,
         String fieldName,

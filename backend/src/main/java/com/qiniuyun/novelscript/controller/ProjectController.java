@@ -3,10 +3,13 @@ package com.qiniuyun.novelscript.controller;
 import com.qiniuyun.novelscript.common.response.ApiResponse;
 import com.qiniuyun.novelscript.controller.request.ProjectCreateRequest;
 import com.qiniuyun.novelscript.controller.request.SourceChapterCreateRequest;
+import com.qiniuyun.novelscript.controller.response.AdaptationJobResponse;
 import com.qiniuyun.novelscript.controller.response.AdaptationScriptResponse;
 import com.qiniuyun.novelscript.controller.response.ProjectResponse;
 import com.qiniuyun.novelscript.controller.response.SourceChapterResponse;
+import com.qiniuyun.novelscript.controller.response.StoryBibleResponse;
 import com.qiniuyun.novelscript.service.AdaptationPipelineService;
+import com.qiniuyun.novelscript.service.ContextSnapshotService;
 import com.qiniuyun.novelscript.service.ProjectService;
 import com.qiniuyun.novelscript.service.SourceChapterService;
 import jakarta.validation.Valid;
@@ -24,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 改编项目与小说章节的最小接口入口。
+ * 改编项目、原始章节与剧本生成相关的最小接口入口。
  */
 @Slf4j
 @Validated
@@ -35,21 +38,32 @@ public class ProjectController {
     private final ProjectService projectService;
     private final SourceChapterService sourceChapterService;
     private final AdaptationPipelineService adaptationPipelineService;
+    private final ContextSnapshotService contextSnapshotService;
 
+    /**
+     * 构造项目控制器。
+     *
+     * @param projectService 项目服务
+     * @param sourceChapterService 章节服务
+     * @param adaptationPipelineService 改编流水线服务
+     * @param contextSnapshotService 上下文快照服务
+     */
     public ProjectController(
         ProjectService projectService,
         SourceChapterService sourceChapterService,
-        AdaptationPipelineService adaptationPipelineService
+        AdaptationPipelineService adaptationPipelineService,
+        ContextSnapshotService contextSnapshotService
     ) {
         this.projectService = projectService;
         this.sourceChapterService = sourceChapterService;
         this.adaptationPipelineService = adaptationPipelineService;
+        this.contextSnapshotService = contextSnapshotService;
     }
 
     /**
      * 创建新的改编项目。
      *
-     * @param request 创建项目请求
+     * @param request 项目创建请求
      * @return 创建后的项目响应
      */
     @PostMapping
@@ -70,7 +84,7 @@ public class ProjectController {
     }
 
     /**
-     * 查询指定改编项目。
+     * 查询指定改编项目详情。
      *
      * @param projectId 项目 ID
      * @return 项目详情响应
@@ -82,7 +96,7 @@ public class ProjectController {
     }
 
     /**
-     * 在指定项目下保存章节。
+     * 在指定项目下保存小说章节。
      *
      * @param projectId 项目 ID
      * @param request 章节保存请求
@@ -104,7 +118,7 @@ public class ProjectController {
     }
 
     /**
-     * 查询指定项目下已经录入的章节列表。
+     * 查询指定项目下已录入的章节列表。
      *
      * @param projectId 项目 ID
      * @return 章节列表响应
@@ -116,22 +130,44 @@ public class ProjectController {
     }
 
     /**
-     * 触发指定项目的最小改编生成流程。
+     * 触发指定项目的改编任务。
      *
      * @param projectId 项目 ID
-     * @return 生成后的最新剧本响应
+     * @return 任务进度响应
      */
     @PostMapping("/{projectId}/adaptations")
-    public ResponseEntity<ApiResponse<AdaptationScriptResponse>> generateScript(
-        @PathVariable @Min(1) Long projectId
-    ) {
+    public ResponseEntity<ApiResponse<AdaptationJobResponse>> generateScript(@PathVariable @Min(1) Long projectId) {
         log.info("收到改编生成请求，项目ID：{}", projectId);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(adaptationPipelineService.generateScript(projectId)));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+            .body(ApiResponse.success(adaptationPipelineService.startAdaptation(projectId)));
     }
 
     /**
-     * 查询指定项目的最新剧本版本。
+     * 查询指定项目当前最新的改编任务。
+     *
+     * @param projectId 项目 ID
+     * @return 最新任务响应
+     */
+    @GetMapping("/{projectId}/adaptations/latest-job")
+    public ApiResponse<AdaptationJobResponse> getLatestAdaptationJob(@PathVariable @Min(1) Long projectId) {
+        log.info("收到查询最新改编任务请求，项目ID：{}", projectId);
+        return ApiResponse.success(adaptationPipelineService.getLatestJob(projectId));
+    }
+
+    /**
+     * 查询指定项目当前最新的 Story Bible 快照。
+     *
+     * @param projectId 项目 ID
+     * @return 最新 Story Bible 响应
+     */
+    @GetMapping("/{projectId}/story-bible/latest")
+    public ApiResponse<StoryBibleResponse> getLatestStoryBible(@PathVariable @Min(1) Long projectId) {
+        log.info("收到查询最新 Story Bible 请求，项目ID：{}", projectId);
+        return ApiResponse.success(contextSnapshotService.getLatestStoryBible(projectId));
+    }
+
+    /**
+     * 查询指定项目当前最新的剧本版本。
      *
      * @param projectId 项目 ID
      * @return 最新剧本响应

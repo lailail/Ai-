@@ -1,15 +1,14 @@
 package com.qiniuyun.novelscript.pipeline.step;
 
+import com.qiniuyun.novelscript.domain.entity.SourceChapter;
+import com.qiniuyun.novelscript.pipeline.model.ChapterNormalizeInput;
+import com.qiniuyun.novelscript.pipeline.model.ChapterNormalizeResult;
+import com.qiniuyun.novelscript.pipeline.model.NormalizedChapter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
-
-import com.qiniuyun.novelscript.domain.entity.SourceChapter;
-import com.qiniuyun.novelscript.pipeline.model.ChapterNormalizeInput;
-import com.qiniuyun.novelscript.pipeline.model.ChapterNormalizeResult;
-import com.qiniuyun.novelscript.pipeline.model.NormalizedChapter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -60,12 +59,24 @@ public class ChapterNormalizeStep {
         return result;
     }
 
+    /**
+     * 校验章节标准化输入是否合法。
+     *
+     * @param input 标准化输入
+     */
     private void validateInput(ChapterNormalizeInput input) {
         if (input == null || input.getChapters() == null) {
             throw new IllegalArgumentException("章节标准化输入不能为空。");
         }
     }
 
+    /**
+     * 解析当前批次章节所属的项目 ID。
+     *
+     * @param input 标准化输入
+     * @param sourceChapters 原始章节列表
+     * @return 项目 ID
+     */
     private Long resolveProjectId(ChapterNormalizeInput input, List<SourceChapter> sourceChapters) {
         if (input.getProjectId() != null) {
             return input.getProjectId();
@@ -78,6 +89,13 @@ public class ChapterNormalizeStep {
             .orElse(null);
     }
 
+    /**
+     * 将单章原文转换为标准化章节对象。
+     *
+     * @param projectId 项目 ID
+     * @param sourceChapter 原始章节实体
+     * @return 标准化章节结果
+     */
     private NormalizedChapter normalizeChapter(Long projectId, SourceChapter sourceChapter) {
         if (sourceChapter.getChapterNo() == null) {
             throw new IllegalArgumentException("章节号不能为空。");
@@ -96,6 +114,12 @@ public class ChapterNormalizeStep {
         return normalizedChapter;
     }
 
+    /**
+     * 清洗章节正文中的空行、换行和首尾空白。
+     *
+     * @param content 原始正文
+     * @return 清洗后的正文
+     */
     private String normalizeContent(String content) {
         if (!StringUtils.hasText(content)) {
             throw new IllegalArgumentException("章节正文不能为空。");
@@ -130,6 +154,14 @@ public class ChapterNormalizeStep {
         return String.join("\n", normalizedLines);
     }
 
+    /**
+     * 优先使用章节标题，否则从正文首行提取标题。
+     *
+     * @param title 原始标题
+     * @param normalizedContent 清洗后的正文
+     * @param chapterNo 章节号
+     * @return 标准化标题
+     */
     private String normalizeTitle(String title, String normalizedContent, Integer chapterNo) {
         if (StringUtils.hasText(title)) {
             return title.trim();
@@ -142,6 +174,12 @@ public class ChapterNormalizeStep {
             .orElseThrow(() -> new IllegalArgumentException("第 " + chapterNo + " 章缺少可提取标题。"));
     }
 
+    /**
+     * 统计章节正文的紧凑字数。
+     *
+     * @param normalizedContent 清洗后的正文
+     * @return 字数统计结果
+     */
     private int countWords(String normalizedContent) {
         String compactContent = WHITESPACE_PATTERN.matcher(normalizedContent).replaceAll("");
         return compactContent.length();
