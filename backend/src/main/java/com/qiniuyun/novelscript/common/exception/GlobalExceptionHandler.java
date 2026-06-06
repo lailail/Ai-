@@ -54,16 +54,4 @@ public class GlobalExceptionHandler {
         log.warn("路径或查询参数校验失败：{}", exception.getMessage());
         return ResponseEntity.badRequest().body(ApiResponse.failure(exception.getMessage()));
     }
-
-    /**
-     * 处理业务参数不合法异常。
-     *
-     * @param exception 业务参数异常
-     * @return 400 响应
-     */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException exception) {
-        log.warn("业务参数校验失败：{}", exception.getMessage());
-        return ResponseEntity.badRequest().body(ApiResponse.failure(exception.getMessage()));
-    }
 }

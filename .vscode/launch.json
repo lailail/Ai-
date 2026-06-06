@@ -3,17 +3,17 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
             "name": "Backend: NovelScriptApplication",
             "request": "launch",
             "mainClass": "com.qiniuyun.novelscript.NovelScriptApplication",
             "projectName": "novel-script-backend",
-            "cwd": "${workspaceFolder}/backend",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "vmArgs": "-Dfile.encoding=UTF-8",
-            "env": {
-                "DEEPSEEK_API_KEY": "${env:DEEPSEEK_API_KEY}"
-            }
+            "cwd": "${workspaceFolder}/backend"
         },
         {
             "type": "java",
@@ -22,12 +22,8 @@
             "mainClass": "com.qiniuyun.novelscript.NovelScriptApplication",
             "projectName": "novel-script-backend",
             "cwd": "${workspaceFolder}/backend",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
-            "vmArgs": "-Dfile.encoding=UTF-8",
             "env": {
-                "SPRING_PROFILES_ACTIVE": "test",
-                "DEEPSEEK_API_KEY": "${env:DEEPSEEK_API_KEY}"
+                "SPRING_PROFILES_ACTIVE": "test"
             }
         }
     ]
