@@ -40,21 +40,26 @@ AI 小说转剧本工具用于将 3 个章节以上的小说文本转换为结�
 大模型：
 
 - DeepSeek
-- 通过 Spring AI 或兼容 OpenAI API 的适配层统一调用
+- 通过 Spring AI 统一接入
 
 ## 大模型配置
 
-当前默认使用 DeepSeek 作为大模型供应商。模型 API Key 不应写入代码或公开配置文件，建议通过环境变量或本地配置文件注入。
-
-推荐环境变量：
+当前默认使用 DeepSeek 
 
 ```text
 DEEPSEEK_API_KEY
-DEEPSEEK_BASE_URL
-DEEPSEEK_MODEL
 ```
+其他的参数配置：
 
-本地保存 key 的 `.env`、`application-local.yml`、`application-local.properties` 等文件已在 `.gitignore` 中排除。
+- Base URL：`https://api.deepseek.com`
+- Model：`deepseek-chat`
+- Temperature：`0.7`
+
+设置 API Key：
+
+```powershell
+setx DEEPSEEK_API_KEY "你的DeepSeek API Key"
+```
 
 ## 本地数据库
 
@@ -64,7 +69,7 @@ DEEPSEEK_MODEL
 novel_script
 ```
 
-后端实现阶段将支持自动载入 SQL 初始化文件，建议目录为：
+后端启动时会自动加载 SQL 初始化文件，当前目录为：
 
 ```text
 backend/src/main/resources/db/schema.sql
