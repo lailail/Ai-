@@ -33,6 +33,7 @@ out/
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
 
 # IDE and OS files.
 .idea/
