@@ -19,6 +19,28 @@ CREATE TABLE IF NOT EXISTS source_chapter (
     CONSTRAINT uk_source_chapter_project_no UNIQUE (project_id, chapter_no)
 ) COMMENT='小说原始章节表';
 
+CREATE TABLE IF NOT EXISTS chapter_context (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '单章上下文主键 ID',
+    project_id BIGINT NOT NULL COMMENT '所属改编项目 ID',
+    chapter_id BIGINT NOT NULL COMMENT '对应的原始章节 ID',
+    context_json TEXT NOT NULL COMMENT '单章上下文 JSON 内容',
+    model_name VARCHAR(128) COMMENT '生成本次上下文所使用的模型名称',
+    status VARCHAR(64) NOT NULL COMMENT '单章上下文状态',
+    created_at DATETIME COMMENT '记录创建时间',
+    updated_at DATETIME COMMENT '记录最后更新时间',
+    CONSTRAINT uk_chapter_context_project_chapter UNIQUE (project_id, chapter_id)
+) COMMENT='单章上下文分析结果表';
+
+CREATE TABLE IF NOT EXISTS story_bible (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT 'Story Bible 主键 ID',
+    project_id BIGINT NOT NULL COMMENT '所属改编项目 ID',
+    bible_json TEXT NOT NULL COMMENT 'Story Bible JSON 内容',
+    version_no INT NOT NULL COMMENT 'Story Bible 版本号',
+    source_context_ids TEXT COMMENT '参与构建的章节上下文快照 ID 列表',
+    created_at DATETIME COMMENT '记录创建时间',
+    updated_at DATETIME COMMENT '记录最后更新时间'
+) COMMENT='项目级 Story Bible 快照表';
+
 CREATE TABLE IF NOT EXISTS adaptation_job (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '任务主键 ID',
     project_id BIGINT NOT NULL COMMENT '所属改编项目 ID',
