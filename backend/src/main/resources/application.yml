@@ -17,3 +17,7 @@ server:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com.qiniuyun.novelscript: info
