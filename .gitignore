@@ -1,0 +1,48 @@
+# Internal AI-coding documents. README.md and SCRIPT_YAML_SCHEMA.md can be submitted.
+AGENTS.md
+docs/
+.github/PULL_REQUEST_TEMPLATE.md
+1.md
+
+# Local environment and secret files.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+*secret*
+*secrets*
+application-local.yml
+application-local.yaml
+application-local.properties
+bootstrap-local.yml
+bootstrap-local.yaml
+bootstrap-local.properties
+
+# Java / Spring Boot build outputs.
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+
+# Node / frontend build outputs.
+node_modules/
+dist/
+.vite/
+
+# IDE and OS files.
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files.
+logs/
+*.log
+tmp/
+temp/

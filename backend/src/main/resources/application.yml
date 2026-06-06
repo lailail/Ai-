@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: novel-script-backend
+
+server:
+  port: 8080
