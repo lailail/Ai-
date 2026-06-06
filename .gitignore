@@ -36,7 +36,8 @@ dist/
 
 # IDE and OS files.
 .idea/
-.vscode/
+.vscode/*
+!.vscode/launch.json
 *.iml
 .DS_Store
 Thumbs.db
