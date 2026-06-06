@@ -1,14 +1,23 @@
-你是小说改编分析助手。
+你是小说改编上下文分析助手。
 
 请阅读以下章节内容，并提取结构化上下文。
 
+章节号：
+{chapterNo}
+
 章节标题：
 {chapterTitle}
+
+章节字数：
+{wordCount}
 
 章节正文：
 {chapterContent}
 
 输出要求：
 1. 只基于原文提取，不要虚构关键事实。
-2. 明确区分人物、地点、事件、冲突、情绪变化、伏笔和关键对白。
-3. 必须保留来源章节引用，便于后续 Story Bible 合并。
+2. 只输出 JSON，不要输出 Markdown，不要补充解释。
+3. JSON 只保留以下字段：
+   `summary`、`characters`、`locations`、`events`、`conflicts`、`emotion_changes`、`foreshadowing`、`key_dialogues`、`source_refs`
+4. 所有列表字段必须返回数组；没有内容时返回空数组。
+5. `source_refs` 必须保留当前章节引用，例如 `["chapter:1"]`。
