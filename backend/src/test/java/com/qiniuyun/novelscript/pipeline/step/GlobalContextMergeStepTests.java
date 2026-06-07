@@ -78,6 +78,35 @@ class GlobalContextMergeStepTests {
     }
 
     /**
+     * 验证列表字段被模型返回成字符串时仍能兼容解析。
+     */
+    @Test
+    void test_p3_c3_global_context_merge_accepts_string_lists() {
+        when(promptTemplateService.render(eq("global-context-merge"), anyMap())).thenReturn("merge contexts");
+        when(aiChatAdapter.chat(eq(GlobalContextMergeStep.SYSTEM_PROMPT), eq("merge contexts"))).thenReturn("""
+            {
+              "summary": "江宁回城后，旧案线索逐渐汇合。",
+              "characters": "江宁、秦舟、周叔",
+              "locations": "旧城巷口，茶铺",
+              "timeline": "江宁回城；铜牌出现；秦舟交出旧档案",
+              "relationships": "江宁与秦舟暂时结盟",
+              "conflicts": "继续追查可能引来更大危险",
+              "source_context_refs": "chapter:1, chapter:2, chapter:3"
+            }
+            """);
+
+        GlobalContextMergeResult result = globalContextMergeStep.execute(1002L, buildChapterContexts());
+
+        assertThat(result.getProjectId()).isEqualTo(1002L);
+        assertThat(result.getCharacters()).containsExactly("江宁", "秦舟", "周叔");
+        assertThat(result.getLocations()).containsExactly("旧城巷口", "茶铺");
+        assertThat(result.getTimeline()).containsExactly("江宁回城", "铜牌出现", "秦舟交出旧档案");
+        assertThat(result.getRelationships()).containsExactly("江宁与秦舟暂时结盟");
+        assertThat(result.getConflicts()).containsExactly("继续追查可能引来更大危险");
+        assertThat(result.getSourceContextRefs()).containsExactly("chapter:1", "chapter:2", "chapter:3");
+    }
+
+    /**
      * 构造测试用章节上下文列表。
      *
      * @return 章节上下文列表

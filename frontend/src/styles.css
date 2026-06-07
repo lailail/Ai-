@@ -245,51 +245,40 @@ body {
   background: rgba(255, 252, 247, 0.78);
 }
 
-.yaml-version-item {
-  padding-inline: 0 !important;
-}
-
-.version-card-button {
+.version-select {
   width: 100%;
-  height: auto;
-  padding: 16px 18px;
-  text-align: left;
-  justify-content: flex-start;
-  border-radius: 18px;
+  margin-top: 8px;
 }
 
-.version-card-button .ant-btn-icon {
-  display: none;
-}
-
-.version-card-button > span {
-  width: 100%;
-}
-
-.version-card-content {
+.version-summary-card {
   display: flex;
-  width: 100%;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(22, 50, 79, 0.1);
+  border-radius: 18px;
+  background: rgba(248, 243, 233, 0.9);
 }
 
-.version-card-header {
+.version-summary-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.version-card-title {
+.version-summary-title {
   flex: 1;
   min-width: 0;
   font-weight: 700;
   line-height: 1.45;
   white-space: normal;
   word-break: break-word;
+  color: #13273f;
 }
 
-.version-card-time {
+.version-summary-time {
   flex-shrink: 0;
   font-size: 12px;
   color: rgba(30, 42, 50, 0.68);
@@ -297,11 +286,6 @@ body {
 
 .version-card-tags {
   width: 100%;
-}
-
-.version-card-button.ant-btn-primary .version-card-title,
-.version-card-button.ant-btn-primary .version-card-time {
-  color: #f8f4ec;
 }
 
 .yaml-editor-heading {
@@ -504,11 +488,11 @@ body {
     position: static;
   }
 
-  .version-card-header {
+  .version-summary-header {
     flex-direction: column;
   }
 
-  .version-card-time {
+  .version-summary-time {
     flex-shrink: 1;
   }
 }

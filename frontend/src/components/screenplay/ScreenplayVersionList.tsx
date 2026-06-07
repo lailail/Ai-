@@ -1,4 +1,4 @@
-import { Button, List, Skeleton, Space, Tag, Typography } from "antd";
+import { Select, Skeleton, Space, Tag, Typography } from "antd";
 import type { ScriptVersionSummary } from "../../types/adaptation";
 
 type ScreenplayVersionListProps = {
@@ -9,7 +9,7 @@ type ScreenplayVersionListProps = {
 };
 
 /**
- * 展示正式剧本工作区左侧的版本列表。
+ * 展示正式剧本工作区左侧的版本选择区。
  */
 export function ScreenplayVersionList({
   versionSummaries,
@@ -20,10 +20,13 @@ export function ScreenplayVersionList({
   if (isLoading) {
     return (
       <section className="screenplay-side-panel">
-        <Skeleton active paragraph={{ rows: 8 }} />
+        <Skeleton active paragraph={{ rows: 6 }} />
       </section>
     );
   }
+
+  const selectedVersion =
+    versionSummaries.find((version) => version.scriptVersionId === selectedScriptVersionId) ?? versionSummaries[0] ?? null;
 
   return (
     <section className="screenplay-side-panel">
@@ -31,41 +34,71 @@ export function ScreenplayVersionList({
         <Typography.Text className="eyebrow">正式剧本</Typography.Text>
         <Typography.Title level={5}>版本列表</Typography.Title>
       </div>
-      <List
-        dataSource={versionSummaries}
-        locale={{ emptyText: "当前项目还没有可查看的剧本版本。" }}
-        renderItem={(version) => {
-          const selected = version.scriptVersionId === selectedScriptVersionId;
-          const label = `第 ${version.versionNo} 版 · ${version.title}`;
 
-          return (
-            <List.Item className="yaml-version-item">
-              <Button
-                type={selected ? "primary" : "default"}
-                className="version-card-button"
-                onClick={() => onSelectVersion(version.scriptVersionId)}
-              >
-                <div className="version-card-content">
-                  <div className="version-card-header">
-                    <Typography.Text className="version-card-title">{label}</Typography.Text>
-                    <Typography.Text className="version-card-time">
-                      {formatVersionTime(version.createdAt)}
-                    </Typography.Text>
-                  </div>
-                  <Space size={[6, 6]} wrap className="version-card-tags">
-                    {version.latest ? <Tag color="blue">最新</Tag> : null}
-                    <Tag color={version.validationStatus === "PASSED" ? "success" : "error"}>
-                      {version.validationStatus === "PASSED" ? "YAML 已通过" : "YAML 未通过"}
-                    </Tag>
-                  </Space>
-                </div>
-              </Button>
-            </List.Item>
-          );
-        }}
+      <Select
+        className="version-select"
+        aria-label="正式剧本版本选择"
+        placeholder="请选择一个正式剧本版本"
+        value={selectedVersion?.scriptVersionId}
+        onChange={onSelectVersion}
+        options={versionSummaries.map((version) => ({
+          value: version.scriptVersionId,
+          label: buildVersionLabel(version)
+        }))}
+        popupMatchSelectWidth={false}
       />
+
+      {selectedVersion ? (
+        <div className="version-summary-card">
+          <div className="version-summary-header">
+            <Typography.Text className="version-summary-title">
+              {buildVersionLabel(selectedVersion)}
+            </Typography.Text>
+            <Typography.Text className="version-summary-time">
+              {formatVersionTime(selectedVersion.createdAt)}
+            </Typography.Text>
+          </div>
+          <Space size={[6, 6]} wrap className="version-card-tags">
+            {selectedVersion.latest ? <Tag color="blue">最新</Tag> : null}
+            <Tag color={selectedVersion.validationStatus === "PASSED" ? "success" : "error"}>
+              {selectedVersion.validationStatus === "PASSED" ? "YAML 已通过" : "YAML 未通过"}
+            </Tag>
+            <Tag color="gold">{renderSourceType(selectedVersion.sourceType)}</Tag>
+          </Space>
+        </div>
+      ) : (
+        <Typography.Paragraph className="tiny-copy">
+          当前项目还没有可查看的剧本版本。
+        </Typography.Paragraph>
+      )}
     </section>
   );
+}
+
+/**
+ * 构造版本下拉框中使用的标签文本。
+ *
+ * @param version 剧本版本摘要
+ * @returns 版本标签
+ */
+function buildVersionLabel(version: ScriptVersionSummary) {
+  return `第 ${version.versionNo} 版 · ${version.title}`;
+}
+
+/**
+ * 将版本来源类型转换为更易读的中文标签。
+ *
+ * @param sourceType 版本来源类型
+ * @returns 中文来源标签
+ */
+function renderSourceType(sourceType: string) {
+  if (sourceType === "USER_EDITED") {
+    return "人工编辑";
+  }
+  if (sourceType === "AI_GENERATED") {
+    return "AI 生成";
+  }
+  return sourceType;
 }
 
 /**

@@ -148,6 +148,53 @@ class SceneGenerateStepTests {
     }
 
     /**
+     * 验证常见字段类型漂移时，场景生成步骤仍能兼容解析。
+     */
+    @Test
+    void test_p3_c4_scene_generate_type_drift() {
+        when(promptTemplateService.render(eq("scene-generate"), anyMap())).thenReturn("generate scene");
+        when(aiChatAdapter.chat(eq(SceneGenerateStep.SYSTEM_PROMPT), eq("generate scene"))).thenReturn("""
+            {
+              "id": { "value": "sc01" },
+              "slugline": { "text": "EXT. OLD TOWN ALLEY - NIGHT" },
+              "purpose": { "summary": "Set up the mystery and reveal the first clue" },
+              "source_refs": "chapter:1, chapter:2",
+              "characters": "char_shenyan、char_luoqi",
+              "actions": {
+                "text": "Shen Yan studies the wall and notices a second trail."
+              },
+              "beats": {
+                "id": "beat01",
+                "text": "He realizes the blood trace was cleaned in a hurry."
+              },
+              "dialogue": {
+                "speaker": "char_shenyan",
+                "content": "Someone tried to erase what happened here.",
+                "notes": "He is already connecting this clue to the old case."
+              },
+              "transition": { "label": "CUT_TO" },
+              "notes": "补一条环境音提示"
+            }
+            """);
+
+        ScriptSceneResult result = sceneGenerateStep.execute(buildStoryBible(), buildScenePlan());
+
+        assertThat(result.getId()).isEqualTo("sc01");
+        assertThat(result.getSourceRefs()).containsExactly("chapter:1", "chapter:2");
+        assertThat(result.getCharacters()).containsExactly("char_shenyan", "char_luoqi");
+        assertThat(result.getActions()).containsExactly("Shen Yan studies the wall and notices a second trail.");
+        assertThat(result.getBeats()).hasSize(1);
+        assertThat(result.getBeats().get(0).getAction()).isEqualTo("He realizes the blood trace was cleaned in a hurry.");
+        assertThat(result.getDialogue()).hasSize(1);
+        assertThat(result.getDialogue().get(0).getCharacterId()).isEqualTo("char_shenyan");
+        assertThat(result.getDialogue().get(0).getLine()).isEqualTo("Someone tried to erase what happened here.");
+        assertThat(result.getDialogue().get(0).getSubtext()).isEqualTo("He is already connecting this clue to the old case.");
+        assertThat(result.getNotes()).isNotNull();
+        assertThat(result.getNotes().getTodo()).isEqualTo("补一条环境音提示");
+        assertThat(result.getTransition()).isEqualTo("CUT_TO");
+    }
+
+    /**
      * 构造测试用 Story Bible 结果。
      *
      * @return Story Bible 结果
