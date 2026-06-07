@@ -322,6 +322,10 @@ body {
   border-radius: 18px;
 }
 
+.yaml-toolbar {
+  margin-bottom: 16px;
+}
+
 .yaml-validation-list {
   margin-top: 16px;
 }
@@ -366,6 +370,42 @@ body {
   font-size: 13px;
   line-height: 1.7;
   color: #1a2f46;
+}
+
+.field-guide-copy .ant-typography {
+  margin-bottom: 8px;
+}
+
+.screenplay-workspace {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(260px, 320px);
+  gap: 20px;
+  align-items: start;
+}
+
+.screenplay-side-panel,
+.screenplay-editor-panel {
+  min-height: 100%;
+  padding: 20px;
+  border: 1px solid rgba(22, 50, 79, 0.1);
+  border-radius: 22px;
+  background: rgba(255, 252, 247, 0.78);
+}
+
+.screenplay-editor-shell {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(22, 50, 79, 0.08);
+  border-radius: 18px;
+}
+
+.screenplay-action-panel {
+  position: sticky;
+  top: 24px;
+}
+
+.screenplay-summary {
+  margin-top: 16px;
 }
 
 .empty-state {
@@ -416,10 +456,26 @@ body {
   .yaml-workspace > :last-child {
     grid-column: 1 / -1;
   }
+
+  .screenplay-workspace {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  }
+
+  .screenplay-workspace > :last-child {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 980px) {
   .yaml-workspace {
     grid-template-columns: 1fr;
+  }
+
+  .screenplay-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .screenplay-action-panel {
+    position: static;
   }
 }

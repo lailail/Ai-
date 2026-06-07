@@ -18,10 +18,7 @@ import {
 import { AdaptationStatusPanel } from "../components/workspace/AdaptationStatusPanel";
 import { ScriptPreviewPanel } from "../components/workspace/ScriptPreviewPanel";
 import { StoryBiblePanel } from "../components/workspace/StoryBiblePanel";
-import type {
-  AdaptationScript,
-  ScriptValidationResult
-} from "../types/adaptation";
+import type { AdaptationScript, ScriptValidationResult } from "../types/adaptation";
 import type { CreateChapterPayload } from "../types/project";
 import { getNextChapterNo } from "../utils/chapter";
 import { saveRecentProjectId } from "../utils/recent-projects";
@@ -151,7 +148,7 @@ export function ProjectWorkspacePage() {
         queryClient.invalidateQueries({ queryKey: ["project-latest-story-bible", numericProjectId] }),
         queryClient.invalidateQueries({ queryKey: ["project-script-versions", numericProjectId] })
       ]);
-      message.success("改编完成，最新 Story Bible 与 YAML 工作区已刷新。");
+      message.success("改编完成，最新 Story Bible 和 YAML 工作区已刷新。");
       setWatchingJobId(null);
     }
 
@@ -352,7 +349,9 @@ export function ProjectWorkspacePage() {
         <div>
           <Typography.Text className="eyebrow">项目工作台</Typography.Text>
           <Typography.Title>{project.title}</Typography.Title>
-          <Typography.Paragraph>{project.description || "你还没有填写项目简介，可以先从章节录入开始。"}</Typography.Paragraph>
+          <Typography.Paragraph>
+            {project.description || "你还没有填写项目简介，可以先从章节录入开始。"}
+          </Typography.Paragraph>
         </div>
         <Space size="middle" wrap>
           <Tag color="blue">{project.status}</Tag>
@@ -462,6 +461,15 @@ export function ProjectWorkspacePage() {
                   }}
                   onValidate={() => validateScriptMutation.mutate()}
                   onSave={() => saveScriptVersionMutation.mutate()}
+                  onExportYaml={() => {
+                    downloadTextFile(`${sanitizeFileName(draftTitle || "script")}.yaml`, draftYamlContent, "text/yaml");
+                    message.success("YAML 文件已开始下载。");
+                  }}
+                  onOpenScreenplay={() => {
+                    const targetVersionId = selectedScript?.scriptVersionId ?? selectedScriptVersionId;
+                    const suffix = targetVersionId ? `?version=${targetVersionId}` : "";
+                    navigate(`/projects/${numericProjectId}/screenplay${suffix}`);
+                  }}
                 />
               )
             }
@@ -498,4 +506,34 @@ function buildValidationResultFromScript(script: AdaptationScript): ScriptValida
   }
 
   return null;
+}
+
+/**
+ * 触发浏览器下载纯文本文件。
+ *
+ * @param fileName 下载文件名
+ * @param content 文件内容
+ * @param mimeType MIME 类型
+ */
+function downloadTextFile(fileName: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 将标题规范化为适合下载的文件名。
+ *
+ * @param value 原始标题
+ * @returns 可用于文件下载的安全名称
+ */
+function sanitizeFileName(value: string) {
+  const nextValue = value.trim().replace(/[\\/:*?"<>|]/g, "_");
+  return nextValue || "script";
 }

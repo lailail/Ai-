@@ -31,7 +31,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * 剧本 YAML 工作区的版本查询、校验和保存服务实现。
+ * 负责 YAML 剧本版本的查询、校验和保存实现。
  */
 @Slf4j
 @Service
@@ -53,7 +53,7 @@ public class ScriptVersionServiceImpl implements ScriptVersionService {
      * @param scriptVersionMapper 剧本版本 Mapper
      * @param yamlSnapshotMapper YAML 快照 Mapper
      * @param schemaValidateStep YAML Schema 校验步骤
-     * @param objectMapper JSON 读写工具
+     * @param objectMapper JSON 工具
      */
     public ScriptVersionServiceImpl(
         ProjectMapper projectMapper,
@@ -110,7 +110,12 @@ public class ScriptVersionServiceImpl implements ScriptVersionService {
         ScriptVersion scriptVersion = loadScriptVersion(projectId, scriptVersionId);
         YamlSnapshot yamlSnapshot = loadLatestYamlSnapshot(projectId, scriptVersionId);
         List<ScriptValidationErrorResponse> validationErrors = parseValidationErrors(yamlSnapshot.getValidationErrors());
-        log.info("【剧本版本】查询指定版本成功，项目ID：{}，版本ID：{}，版本号：{}", projectId, scriptVersionId, scriptVersion.getVersionNo());
+        log.info(
+            "【剧本版本】查询指定版本成功，项目ID：{}，版本ID：{}，版本号：{}",
+            projectId,
+            scriptVersionId,
+            scriptVersion.getVersionNo()
+        );
         return AdaptationScriptResponse.from(projectId, scriptVersion, yamlSnapshot, null, validationErrors);
     }
 
@@ -126,7 +131,12 @@ public class ScriptVersionServiceImpl implements ScriptVersionService {
     public ScriptValidationResponse validateScript(Long projectId, String yamlContent) {
         loadProject(projectId);
         SchemaValidationResult validationResult = schemaValidateStep.execute(yamlContent);
-        log.info("【剧本版本】完成 YAML 校验，项目ID：{}，是否通过：{}，错误数：{}", projectId, validationResult.isValid(), validationResult.getErrors().size());
+        log.info(
+            "【剧本版本】完成 YAML 校验，项目ID：{}，是否通过：{}，错误数：{}",
+            projectId,
+            validationResult.isValid(),
+            validationResult.getErrors().size()
+        );
         return ScriptValidationResponse.from(projectId, SCHEMA_VERSION, validationResult);
     }
 
@@ -141,6 +151,21 @@ public class ScriptVersionServiceImpl implements ScriptVersionService {
     @Override
     @Transactional
     public AdaptationScriptResponse saveScriptVersion(Long projectId, String title, String yamlContent) {
+        return saveScriptVersion(projectId, title, yamlContent, SOURCE_TYPE_USER_EDITED);
+    }
+
+    /**
+     * 将当前 YAML 内容保存为指定来源的新版本。
+     *
+     * @param projectId 项目 ID
+     * @param title 新版本标题
+     * @param yamlContent 用户编辑后的 YAML 原文
+     * @param sourceType 版本来源类型
+     * @return 保存后的新版本详情
+     */
+    @Override
+    @Transactional
+    public AdaptationScriptResponse saveScriptVersion(Long projectId, String title, String yamlContent, String sourceType) {
         Project project = loadProject(projectId);
         SchemaValidationResult validationResult = schemaValidateStep.execute(yamlContent);
         LocalDateTime now = LocalDateTime.now();
@@ -148,7 +173,7 @@ public class ScriptVersionServiceImpl implements ScriptVersionService {
         ScriptVersion scriptVersion = new ScriptVersion();
         scriptVersion.setProjectId(projectId);
         scriptVersion.setVersionNo(resolveNextVersionNo(projectId));
-        scriptVersion.setSourceType(SOURCE_TYPE_USER_EDITED);
+        scriptVersion.setSourceType(resolveSourceType(sourceType));
         scriptVersion.setTitle(resolveEditedVersionTitle(project, title));
         scriptVersion.setCreatedAt(now);
         scriptVersion.setUpdatedAt(now);
@@ -165,7 +190,12 @@ public class ScriptVersionServiceImpl implements ScriptVersionService {
         yamlSnapshot.setUpdatedAt(now);
         yamlSnapshotMapper.insert(yamlSnapshot);
 
-        log.info("【剧本版本】保存人工编辑版本成功，项目ID：{}，版本号：{}，校验状态：{}", projectId, scriptVersion.getVersionNo(), yamlSnapshot.getValidationStatus());
+        log.info(
+            "【剧本版本】保存人工编辑版本成功，项目ID：{}，版本号：{}，校验状态：{}",
+            projectId,
+            scriptVersion.getVersionNo(),
+            yamlSnapshot.getValidationStatus()
+        );
         return AdaptationScriptResponse.from(
             projectId,
             scriptVersion,
@@ -325,6 +355,19 @@ public class ScriptVersionServiceImpl implements ScriptVersionService {
             return title.trim();
         }
         return project.getTitle() + " - 手动编辑稿";
+    }
+
+    /**
+     * 规范化版本来源类型，避免写入空值。
+     *
+     * @param sourceType 调用方传入的版本来源
+     * @return 可落库的版本来源
+     */
+    private String resolveSourceType(String sourceType) {
+        if (StringUtils.hasText(sourceType)) {
+            return sourceType.trim();
+        }
+        return SOURCE_TYPE_USER_EDITED;
     }
 
     /**

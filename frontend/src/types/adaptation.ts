@@ -28,6 +28,18 @@ export interface AdaptationScript {
   jobStatus: string | null;
 }
 
+export interface ScreenplaySnapshot {
+  projectId: number;
+  scriptVersionId: number;
+  versionNo: number;
+  title: string;
+  sourceType: string;
+  renderVersion: string;
+  markdownContent: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ScriptValidationError {
   path: string;
   message: string;

@@ -75,3 +75,15 @@ CREATE TABLE IF NOT EXISTS yaml_snapshot (
     created_at DATETIME COMMENT '记录创建时间',
     updated_at DATETIME COMMENT '记录最后更新时间'
 ) COMMENT='剧本 YAML 快照表';
+
+CREATE TABLE IF NOT EXISTS screenplay_snapshot (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '正式剧本快照主键 ID',
+    project_id BIGINT NOT NULL COMMENT '所属改编项目 ID',
+    script_version_id BIGINT NOT NULL COMMENT '对应的剧本版本 ID',
+    title VARCHAR(255) COMMENT '当前正式剧本标题',
+    markdown_content TEXT NOT NULL COMMENT '正式剧本 Markdown 正文',
+    render_version VARCHAR(32) NOT NULL COMMENT '正式剧本渲染规则版本',
+    source_type VARCHAR(64) COMMENT '当前快照所对应的版本来源',
+    created_at DATETIME COMMENT '记录创建时间',
+    updated_at DATETIME COMMENT '记录最后更新时间'
+) COMMENT='正式剧本快照表';
