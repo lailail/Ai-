@@ -15,6 +15,10 @@
 - 支持导出 YAML、正式剧本 Markdown、正式剧本 TXT
 - YAML 与正式剧本工作区都支持通过版本下拉框切换历史版本
 
+## 视频链接
+
+https://www.bilibili.com/video/BV1MqEb6jEbZ/?spm_id_from=333.1387.homepage.video_card.click
+
 ## 技术栈
 
 后端：
@@ -35,6 +39,10 @@
 - Ant Design
 - TanStack Query
 - Monaco Editor
+
+说明：
+
+- `Monaco Editor` 当前同时用于 `YAML 初稿` 编辑区和 `正式剧本` 的 Markdown 编辑区。
 
 模型：
 
@@ -77,11 +85,16 @@ backend/src/main/resources/application.yml
 - 用户名：`root`
 - 密码：`123456`
 
-后端启动时会自动加载：
+后端启动时默认自动加载：
 
 ```text
 backend/src/main/resources/db/schema.sql
 ```
+
+说明：
+
+- `schema.sql` 会在本地启动时自动建库建表。
+- `data.sql` 当前作为演示数据预留文件保留在同目录下，但默认不自动加载。
 
 当前核心表：
 
@@ -94,26 +107,6 @@ backend/src/main/resources/db/schema.sql
 - `yaml_snapshot`
 - `screenplay_snapshot`
 
-## 目录结构
-
-```text
-backend/
-frontend/
-scripts/
-samples/
-```
-
-- `backend/`：Spring Boot 后端工程
-- `frontend/`：React 前端工程
-- `scripts/`：本地启动、导入样例、验证等辅助脚本
-- `samples/`：样例小说和样例剧本输出
-
-样例目录约定：
-
-```text
-samples/novels/
-samples/scripts/
-```
 
 ## 本地启动
 
@@ -149,10 +142,20 @@ npm run dev
 - `YAML 初稿`：编辑结构化剧本、查看字段说明、执行校验、导出 YAML
 - `正式剧本`：查看渲染后的可读剧本、直接编辑、保存回写 YAML、导出 Markdown/TXT
 
+YAML 工作区布局：
+
+- 左侧：版本下拉框和当前版本摘要
+- 中间：YAML Monaco 编辑区
+- 右侧：Schema 校验结果
+
+字段说明：
+
+- `YAML 初稿` 页的“字段说明”抽屉当前展示完整 Schema 字段路径说明，而不是只展示关键字段。
+
 正式剧本工作区布局：
 
 - 左侧：剧本版本下拉框和当前版本摘要
-- 中间：正式剧本 Markdown 编辑区
+- 中间：正式剧本 Monaco Markdown 编辑区
 - 右侧：重新渲染、保存并回写 YAML、导出 Markdown/TXT
 
 ## 主要接口
@@ -217,4 +220,4 @@ AI 流水线对大模型返回结果采用“后端兼容解析为主，Prompt �
 YAML 字段说明和设计原因见：
 
 - [SCRIPT_YAML_SCHEMA.md](SCRIPT_YAML_SCHEMA.md)
-- [docs/spec/yaml-schema.md](docs/spec/yaml-schema.md)
+

@@ -10,7 +10,7 @@ project:
   id: "project_001"
   title: "示例小说"
   source_chapters: [1, 2, 3]
-  adaptation_mode: "novel_to_screenplay"
+  adaptation_mode: "screenplay"
 story_bible:
   characters: []
   relationships: []
@@ -22,7 +22,7 @@ story_bible:
 episodes: []
 metadata:
   generated_at: "2026-06-07T10:00:00+08:00"
-  generator: "deepseek-chat"
+  generator: "spring-ai-deepseek"
   notes: []
 ```
 
@@ -57,8 +57,8 @@ metadata:
   - 含义：本次剧本覆盖的来源章节编号列表。
   - 设计原因：说明这版剧本具体基于哪些原文章节生成。
 - `project.adaptation_mode`
-  - 含义：改编模式，当前固定为 `novel_to_screenplay`。
-  - 设计原因：明确当前输出面向影视和短剧改编，而不是其他格式。
+  - 含义：改编模式标识，当前生成链路默认写入 `screenplay`。
+  - 设计原因：明确这份结构稿面向影视和短剧剧本输出，而不是小说原文或其他格式。
 
 ### story_bible
 
@@ -267,8 +267,8 @@ metadata:
   - 含义：当前 YAML 生成时间。
   - 设计原因：帮助作者和评审确认初稿生成时点。
 - `metadata.generator`
-  - 含义：生成器标识，例如模型名。
-  - 设计原因：方便回溯这份初稿的技术来源。
+  - 含义：生成器标识，例如当前接入链路或模型来源。
+  - 设计原因：方便回溯这份初稿是由哪条生成链路产出的；当前自动生成结果默认写入 `spring-ai-deepseek`。
 - `metadata.notes`
   - 含义：附加备注列表。
   - 设计原因：用于保存补充说明，而不影响主剧本结构。
