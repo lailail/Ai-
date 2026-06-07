@@ -3,6 +3,7 @@ import type { ScreenplaySnapshot } from "../../types/adaptation";
 
 type ScreenplayActionPanelProps = {
   selectedScreenplay: ScreenplaySnapshot | null;
+  canRender: boolean;
   hasUnsavedChanges: boolean;
   isRendering: boolean;
   isSaving: boolean;
@@ -14,10 +15,11 @@ type ScreenplayActionPanelProps = {
 };
 
 /**
- * 展示正式剧本页面右侧的操作面板。
+ * 展示正式剧本工作区右侧的操作面板。
  */
 export function ScreenplayActionPanel({
   selectedScreenplay,
+  canRender,
   hasUnsavedChanges,
   isRendering,
   isSaving,
@@ -35,7 +37,7 @@ export function ScreenplayActionPanel({
       </div>
 
       <Typography.Paragraph className="tiny-copy">
-        这里展示的是适合作者直接阅读和润色的正式剧本视图。保存后，系统会把修改内容回写到 YAML 并生成新版本。
+        这里展示的是适合作者直接阅读和润色的正式剧本视图。保存后，系统会把修改内容回写到 YAML，并生成新的版本记录。
       </Typography.Paragraph>
 
       {selectedScreenplay ? (
@@ -50,7 +52,15 @@ export function ScreenplayActionPanel({
         </div>
       ) : null}
 
-      {hasUnsavedChanges ? (
+      {!selectedScreenplay && canRender ? (
+        <Alert
+          className="workspace-alert"
+          type="info"
+          showIcon
+          message="当前版本还没有正式剧本"
+          description="点击“重新渲染正式剧本”后，系统会根据当前 YAML 版本生成可编辑的正式剧本内容。"
+        />
+      ) : hasUnsavedChanges ? (
         <Alert
           className="workspace-alert"
           type="warning"
@@ -69,7 +79,7 @@ export function ScreenplayActionPanel({
       )}
 
       <div className="action-row">
-        <Button onClick={onRender} loading={isRendering} disabled={!selectedScreenplay}>
+        <Button onClick={onRender} loading={isRendering} disabled={!canRender}>
           重新渲染正式剧本
         </Button>
         <Button type="primary" onClick={onSave} loading={isSaving} disabled={!selectedScreenplay || !hasUnsavedChanges}>

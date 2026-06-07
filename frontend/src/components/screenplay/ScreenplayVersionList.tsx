@@ -9,7 +9,7 @@ type ScreenplayVersionListProps = {
 };
 
 /**
- * 展示正式剧本页面左侧的版本列表。
+ * 展示正式剧本工作区左侧的版本列表。
  */
 export function ScreenplayVersionList({
   versionSummaries,
@@ -42,19 +42,23 @@ export function ScreenplayVersionList({
             <List.Item className="yaml-version-item">
               <Button
                 type={selected ? "primary" : "default"}
-                className="yaml-version-button"
+                className="version-card-button"
                 onClick={() => onSelectVersion(version.scriptVersionId)}
               >
-                <span className="yaml-version-title">{label}</span>
-                <Space size={[6, 6]} wrap>
-                  {version.latest ? <Tag color="blue">最新</Tag> : null}
-                  <Tag color={version.validationStatus === "PASSED" ? "success" : "error"}>
-                    {version.validationStatus === "PASSED" ? "YAML 已通过" : "YAML 未通过"}
-                  </Tag>
-                </Space>
-                <Typography.Text className="yaml-version-time">
-                  {formatVersionTime(version.createdAt)}
-                </Typography.Text>
+                <div className="version-card-content">
+                  <div className="version-card-header">
+                    <Typography.Text className="version-card-title">{label}</Typography.Text>
+                    <Typography.Text className="version-card-time">
+                      {formatVersionTime(version.createdAt)}
+                    </Typography.Text>
+                  </div>
+                  <Space size={[6, 6]} wrap className="version-card-tags">
+                    {version.latest ? <Tag color="blue">最新</Tag> : null}
+                    <Tag color={version.validationStatus === "PASSED" ? "success" : "error"}>
+                      {version.validationStatus === "PASSED" ? "YAML 已通过" : "YAML 未通过"}
+                    </Tag>
+                  </Space>
+                </div>
               </Button>
             </List.Item>
           );

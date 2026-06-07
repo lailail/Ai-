@@ -25,6 +25,7 @@ import com.qiniuyun.novelscript.service.SourceChapterService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.nio.charset.StandardCharsets;
+import java.net.URLEncoder;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -364,13 +365,14 @@ public class ProjectController {
             : screenplayService.exportMarkdown(projectId, scriptVersionId);
         ScreenplayResponse screenplayResponse = screenplayService.getScreenplay(projectId, scriptVersionId);
         String fileName = buildExportFileName(screenplayResponse.getTitle(), normalizedFormat);
+        String asciiFileName = buildAsciiExportFileName(screenplayResponse.getVersionNo(), normalizedFormat);
         MediaType mediaType = "txt".equals(normalizedFormat)
-            ? MediaType.TEXT_PLAIN
-            : MediaType.parseMediaType("text/markdown");
+            ? new MediaType("text", "plain", StandardCharsets.UTF_8)
+            : new MediaType("text", "markdown", StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
             .contentType(mediaType)
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDispositionHeader(asciiFileName, fileName))
             .body(content.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -400,5 +402,29 @@ public class ProjectController {
             safeTitle = "screenplay";
         }
         return safeTitle + "." + format;
+    }
+
+    /**
+     * 构建仅包含 ASCII 字符的回退文件名，避免 Servlet 容器在响应头编码阶段报错。
+     *
+     * @param versionNo 剧本版本号
+     * @param format 导出格式
+     * @return 仅包含 ASCII 字符的安全文件名
+     */
+    private String buildAsciiExportFileName(Integer versionNo, String format) {
+        int safeVersionNo = versionNo == null ? 1 : versionNo;
+        return "screenplay-v" + safeVersionNo + "." + format;
+    }
+
+    /**
+     * 构建同时包含 ASCII 回退名和 UTF-8 扩展名的下载响应头。
+     *
+     * @param asciiFileName ASCII 回退文件名
+     * @param utf8FileName 原始 UTF-8 文件名
+     * @return 可直接写入响应头的 Content-Disposition 值
+     */
+    private String buildContentDispositionHeader(String asciiFileName, String utf8FileName) {
+        String encodedFileName = URLEncoder.encode(utf8FileName, StandardCharsets.UTF_8).replace("+", "%20");
+        return "attachment; filename=\"" + asciiFileName + "\"; filename*=UTF-8''" + encodedFileName;
     }
 }
