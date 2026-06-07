@@ -1,0 +1,31 @@
+- main [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: AI Novel Script Studio
+      - heading "先整理小说项目， 再让剧本改编有上下文可循。" [level=1] [ref=e8]:
+        - text: 先整理小说项目，
+        - text: 再让剧本改编有上下文可循。
+      - generic [ref=e9]: 这个阶段先完成项目前台入口。你可以创建改编项目、持续补充章节，并用真实章节数量卡住后续 AI 改编入口，让生成过程始终建立在完整上下文之上。
+    - generic [ref=e10]:
+      - generic [ref=e11]: 3 章以上
+      - generic [ref=e12]: 项目独立上下文
+      - generic [ref=e13]: 以 Story Bible 做准绳
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: 新建项目
+        - heading "创建一本新的小说改编项目" [level=3] [ref=e18]
+      - generic [ref=e19]:
+        - generic [ref=e21]:
+          - generic "项目标题" [ref=e23]: "* 项目标题"
+          - textbox "* 项目标题" [ref=e27]:
+            - /placeholder: 例如：长夜余烬
+        - generic [ref=e29]:
+          - generic "项目简介" [ref=e31]
+          - textbox "项目简介" [ref=e35]:
+            - /placeholder: 写下题材、基调、预计改编方向。
+        - button "创建项目并进入录入" [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]: 创建项目并进入录入
+    - generic [ref=e39]:
+      - generic [ref=e40]: 项目列表
+      - heading "继续上次的录入工作" [level=3] [ref=e41]

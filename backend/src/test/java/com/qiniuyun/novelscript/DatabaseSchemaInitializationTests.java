@@ -39,6 +39,7 @@ class DatabaseSchemaInitializationTests {
             assertTrue(tableExists(metaData, "adaptation_job"));
             assertTrue(tableExists(metaData, "script_version"));
             assertTrue(tableExists(metaData, "yaml_snapshot"));
+            assertTrue(tableExists(metaData, "screenplay_snapshot"));
         }
     }
 

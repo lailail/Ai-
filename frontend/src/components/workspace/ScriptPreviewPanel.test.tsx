@@ -18,6 +18,18 @@ vi.mock("@monaco-editor/react", () => ({
   )
 }));
 
+const originalGetComputedStyle = window.getComputedStyle;
+
+beforeAll(() => {
+  window.getComputedStyle = vi.fn(() => ({
+    getPropertyValue: () => ""
+  })) as typeof window.getComputedStyle;
+});
+
+afterAll(() => {
+  window.getComputedStyle = originalGetComputedStyle;
+});
+
 describe("ScriptPreviewPanel", () => {
   it("should render version list and validation errors for the selected script", () => {
     render(
@@ -54,26 +66,26 @@ describe("ScriptPreviewPanel", () => {
           validationStatus: "FAILED",
           validationErrors: [
             {
-              path: "script.scenes[0].title",
-              message: "场景标题不能为空",
+              path: "episodes[0].scenes[0].slugline",
+              message: "场景标题行不能为空",
               rejectedValue: ""
             }
           ],
           createdAt: "2026-06-06T14:30:00",
-          yamlContent: "schema_version: 1.0\nscript:\n  title: 旧城疑影",
+          yamlContent: "schema_version: 1.0\nepisodes:\n  - title: 旧城疑影",
           jobId: 9,
           jobStatus: "SUCCEEDED"
         }}
         draftTitle="作者精修版"
-        draftYamlContent="schema_version: 1.0\nscript:\n  title: 旧城疑影"
+        draftYamlContent="schema_version: 1.0\nepisodes:\n  - title: 旧城疑影"
         validationResult={{
           projectId: 1,
           schemaVersion: "1.0",
           valid: false,
           errors: [
             {
-              path: "script.scenes[0].title",
-              message: "场景标题不能为空",
+              path: "episodes[0].scenes[0].slugline",
+              message: "场景标题行不能为空",
               rejectedValue: ""
             }
           ]
@@ -88,22 +100,29 @@ describe("ScriptPreviewPanel", () => {
         onDraftYamlChange={() => {}}
         onValidate={() => {}}
         onSave={() => {}}
+        onExportYaml={() => {}}
+        onOpenScreenplay={() => {}}
       />
     );
 
     expect(screen.getByText("版本列表")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /第 3 版 · 作者精修版/ })).toBeInTheDocument();
     expect(screen.getByText("当前版本校验未通过")).toBeInTheDocument();
-    expect(screen.getByText(/场景标题不能为空/)).toBeInTheDocument();
+    expect(screen.getByText(/场景标题行不能为空/)).toBeInTheDocument();
     expect(screen.getByDisplayValue("作者精修版")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "字段说明" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "导出 YAML" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "查看正式剧本" })).toBeInTheDocument();
   });
 
-  it("should trigger version switch validate and save callbacks", () => {
+  it("should trigger version switch validate save export and open-screenplay callbacks", () => {
     const handleSelectVersion = vi.fn();
     const handleDraftTitleChange = vi.fn();
     const handleDraftYamlChange = vi.fn();
     const handleValidate = vi.fn();
     const handleSave = vi.fn();
+    const handleExportYaml = vi.fn();
+    const handleOpenScreenplay = vi.fn();
 
     render(
       <ScriptPreviewPanel
@@ -156,6 +175,8 @@ describe("ScriptPreviewPanel", () => {
         onDraftYamlChange={handleDraftYamlChange}
         onValidate={handleValidate}
         onSave={handleSave}
+        onExportYaml={handleExportYaml}
+        onOpenScreenplay={handleOpenScreenplay}
       />
     );
 
@@ -164,11 +185,68 @@ describe("ScriptPreviewPanel", () => {
     fireEvent.change(screen.getByTestId("yaml-editor"), { target: { value: "schema_version: 1.1" } });
     fireEvent.click(screen.getByRole("button", { name: "校验 YAML" }));
     fireEvent.click(screen.getByRole("button", { name: "另存为新版本" }));
+    fireEvent.click(screen.getByRole("button", { name: "导出 YAML" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看正式剧本" }));
 
     expect(handleSelectVersion).toHaveBeenCalledWith(11);
     expect(handleDraftTitleChange).toHaveBeenCalledWith("终稿");
     expect(handleDraftYamlChange).toHaveBeenCalledWith("schema_version: 1.1");
     expect(handleValidate).toHaveBeenCalled();
     expect(handleSave).toHaveBeenCalled();
+    expect(handleExportYaml).toHaveBeenCalled();
+    expect(handleOpenScreenplay).toHaveBeenCalled();
+  });
+
+  it("should open field guide drawer when clicking the field guide button", () => {
+    render(
+      <ScriptPreviewPanel
+        versionSummaries={[
+          {
+            projectId: 1,
+            scriptVersionId: 12,
+            versionNo: 3,
+            title: "作者精修版",
+            sourceType: "USER_EDITED",
+            validationStatus: "FAILED",
+            latest: true,
+            createdAt: "2026-06-06T14:30:00"
+          }
+        ]}
+        selectedScript={{
+          projectId: 1,
+          scriptVersionId: 12,
+          versionNo: 3,
+          title: "作者精修版",
+          sourceType: "USER_EDITED",
+          schemaVersion: "1.0",
+          validationStatus: "FAILED",
+          validationErrors: [],
+          createdAt: "2026-06-06T14:30:00",
+          yamlContent: "schema_version: 1.0",
+          jobId: 9,
+          jobStatus: "SUCCEEDED"
+        }}
+        draftTitle="作者精修版"
+        draftYamlContent="schema_version: 1.0"
+        validationResult={null}
+        hasUnsavedChanges={false}
+        isListLoading={false}
+        isDetailLoading={false}
+        isValidating={false}
+        isSaving={false}
+        onSelectVersion={() => {}}
+        onDraftTitleChange={() => {}}
+        onDraftYamlChange={() => {}}
+        onValidate={() => {}}
+        onSave={() => {}}
+        onExportYaml={() => {}}
+        onOpenScreenplay={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "字段说明" }));
+
+    expect(screen.getByText("YAML 字段说明")).toBeInTheDocument();
+    expect(screen.getByText("story_bible")).toBeInTheDocument();
   });
 });

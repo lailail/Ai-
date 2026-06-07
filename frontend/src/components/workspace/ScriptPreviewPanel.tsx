@@ -1,6 +1,8 @@
+import { useState } from "react";
 import Editor from "@monaco-editor/react";
 import { Alert, Button, Input, Skeleton, Space, Tag, Typography } from "antd";
 import type { AdaptationScript, ScriptValidationResult, ScriptVersionSummary } from "../../types/adaptation";
+import { YamlFieldGuideDrawer } from "./YamlFieldGuideDrawer";
 import { YamlValidationPanel } from "./YamlValidationPanel";
 import { YamlVersionList } from "./YamlVersionList";
 
@@ -20,6 +22,8 @@ type ScriptPreviewPanelProps = {
   onDraftYamlChange: (value: string) => void;
   onValidate: () => void;
   onSave: () => void;
+  onExportYaml: () => void;
+  onOpenScreenplay: () => void;
 };
 
 /**
@@ -40,8 +44,12 @@ export function ScriptPreviewPanel({
   onDraftTitleChange,
   onDraftYamlChange,
   onValidate,
-  onSave
+  onSave,
+  onExportYaml,
+  onOpenScreenplay
 }: ScriptPreviewPanelProps) {
+  const [fieldGuideOpen, setFieldGuideOpen] = useState(false);
+
   if (!isListLoading && versionSummaries.length === 0) {
     return (
       <section className="panel panel-soft">
@@ -67,7 +75,7 @@ export function ScriptPreviewPanel({
         <Typography.Title level={4}>YAML 版本化编辑区</Typography.Title>
       </div>
       <Typography.Paragraph className="panel-copy">
-        在同一个 Tab 内切换历史版本、编辑当前草稿、执行 Schema 校验，并将人工修改另存为新版本。
+        在这里维护结构化剧本草稿。你可以切换历史版本、执行 Schema 校验、导出 YAML，并跳转到正式剧本页继续影视化编辑。
       </Typography.Paragraph>
 
       <div className="yaml-workspace">
@@ -130,6 +138,18 @@ export function ScriptPreviewPanel({
                 </div>
               </div>
 
+              <div className="yaml-toolbar">
+                <Space size={[8, 8]} wrap>
+                  <Button onClick={() => setFieldGuideOpen(true)}>字段说明</Button>
+                  <Button onClick={onExportYaml} disabled={!draftYamlContent.trim()}>
+                    导出 YAML
+                  </Button>
+                  <Button type="default" onClick={onOpenScreenplay}>
+                    查看正式剧本
+                  </Button>
+                </Space>
+              </div>
+
               <div className="yaml-editor-shell">
                 <Editor
                   height="620px"
@@ -167,6 +187,8 @@ export function ScriptPreviewPanel({
 
         <YamlValidationPanel validationResult={validationResult} />
       </div>
+
+      <YamlFieldGuideDrawer open={fieldGuideOpen} onClose={() => setFieldGuideOpen(false)} />
     </section>
   );
 }

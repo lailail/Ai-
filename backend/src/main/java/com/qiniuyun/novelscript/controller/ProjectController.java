@@ -2,12 +2,16 @@ package com.qiniuyun.novelscript.controller;
 
 import com.qiniuyun.novelscript.common.response.ApiResponse;
 import com.qiniuyun.novelscript.controller.request.ProjectCreateRequest;
+import com.qiniuyun.novelscript.controller.request.ScreenplayRenderRequest;
+import com.qiniuyun.novelscript.controller.request.ScreenplaySaveRequest;
+import com.qiniuyun.novelscript.controller.request.ScreenplaySyncYamlRequest;
 import com.qiniuyun.novelscript.controller.request.ScriptValidateRequest;
 import com.qiniuyun.novelscript.controller.request.ScriptVersionSaveRequest;
 import com.qiniuyun.novelscript.controller.request.SourceChapterCreateRequest;
 import com.qiniuyun.novelscript.controller.response.AdaptationJobResponse;
 import com.qiniuyun.novelscript.controller.response.AdaptationScriptResponse;
 import com.qiniuyun.novelscript.controller.response.ProjectResponse;
+import com.qiniuyun.novelscript.controller.response.ScreenplayResponse;
 import com.qiniuyun.novelscript.controller.response.ScriptValidationResponse;
 import com.qiniuyun.novelscript.controller.response.ScriptVersionSummaryResponse;
 import com.qiniuyun.novelscript.controller.response.SourceChapterResponse;
@@ -15,13 +19,17 @@ import com.qiniuyun.novelscript.controller.response.StoryBibleResponse;
 import com.qiniuyun.novelscript.service.AdaptationPipelineService;
 import com.qiniuyun.novelscript.service.ContextSnapshotService;
 import com.qiniuyun.novelscript.service.ProjectService;
+import com.qiniuyun.novelscript.service.ScreenplayService;
 import com.qiniuyun.novelscript.service.ScriptVersionService;
 import com.qiniuyun.novelscript.service.SourceChapterService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,10 +37,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 改编项目、原始章节与剧本工作区相关的控制器。
+ * 负责改编项目、章节、YAML 工作区和正式剧本相关接口的控制器。
  */
 @Slf4j
 @Validated
@@ -45,6 +54,7 @@ public class ProjectController {
     private final AdaptationPipelineService adaptationPipelineService;
     private final ContextSnapshotService contextSnapshotService;
     private final ScriptVersionService scriptVersionService;
+    private final ScreenplayService screenplayService;
 
     /**
      * 构造项目控制器。
@@ -54,19 +64,22 @@ public class ProjectController {
      * @param adaptationPipelineService 改编流水线服务
      * @param contextSnapshotService 上下文快照服务
      * @param scriptVersionService 剧本版本服务
+     * @param screenplayService 正式剧本服务
      */
     public ProjectController(
         ProjectService projectService,
         SourceChapterService sourceChapterService,
         AdaptationPipelineService adaptationPipelineService,
         ContextSnapshotService contextSnapshotService,
-        ScriptVersionService scriptVersionService
+        ScriptVersionService scriptVersionService,
+        ScreenplayService screenplayService
     ) {
         this.projectService = projectService;
         this.sourceChapterService = sourceChapterService;
         this.adaptationPipelineService = adaptationPipelineService;
         this.contextSnapshotService = contextSnapshotService;
         this.scriptVersionService = scriptVersionService;
+        this.screenplayService = screenplayService;
     }
 
     /**
@@ -242,5 +255,150 @@ public class ProjectController {
         return ResponseEntity.status(HttpStatus.CREATED).body(
             ApiResponse.success(scriptVersionService.saveScriptVersion(projectId, request.getTitle(), request.getYamlContent()))
         );
+    }
+
+    /**
+     * 查询当前项目最新剧本版本对应的正式剧本。
+     *
+     * @param projectId 项目 ID
+     * @return 最新正式剧本响应
+     */
+    @GetMapping("/{projectId}/screenplays/latest")
+    public ApiResponse<ScreenplayResponse> getLatestScreenplay(@PathVariable @Min(1) Long projectId) {
+        log.info("收到查询最新正式剧本请求，项目ID：{}", projectId);
+        return ApiResponse.success(screenplayService.getLatestScreenplay(projectId));
+    }
+
+    /**
+     * 查询指定剧本版本对应的正式剧本。
+     *
+     * @param projectId 项目 ID
+     * @param scriptVersionId 剧本版本 ID
+     * @return 指定版本正式剧本响应
+     */
+    @GetMapping("/{projectId}/screenplays/{scriptVersionId}")
+    public ApiResponse<ScreenplayResponse> getScreenplay(
+        @PathVariable @Min(1) Long projectId,
+        @PathVariable @Min(1) Long scriptVersionId
+    ) {
+        log.info("收到查询正式剧本请求，项目ID：{}，剧本版本ID：{}", projectId, scriptVersionId);
+        return ApiResponse.success(screenplayService.getScreenplay(projectId, scriptVersionId));
+    }
+
+    /**
+     * 根据指定 YAML 版本重新渲染正式剧本，并保存为快照。
+     *
+     * @param projectId 项目 ID
+     * @param request 正式剧本渲染请求
+     * @return 渲染后的正式剧本响应
+     */
+    @PostMapping("/{projectId}/screenplays/render")
+    public ApiResponse<ScreenplayResponse> renderScreenplay(
+        @PathVariable @Min(1) Long projectId,
+        @Valid @RequestBody ScreenplayRenderRequest request
+    ) {
+        log.info("收到正式剧本渲染请求，项目ID：{}，剧本版本ID：{}", projectId, request.getScriptVersionId());
+        return ApiResponse.success(screenplayService.renderScreenplay(projectId, request.getScriptVersionId()));
+    }
+
+    /**
+     * 将正式剧本编辑结果同步回 YAML，并生成新的剧本版本。
+     *
+     * @param projectId 项目 ID
+     * @param request 正式剧本同步回写请求
+     * @return 新生成的 YAML 版本响应
+     */
+    @PostMapping("/{projectId}/screenplays/sync-yaml")
+    public ApiResponse<AdaptationScriptResponse> syncScreenplayToYaml(
+        @PathVariable @Min(1) Long projectId,
+        @Valid @RequestBody ScreenplaySyncYamlRequest request
+    ) {
+        log.info("收到正式剧本同步回 YAML 请求，项目ID：{}，原版本ID：{}", projectId, request.getScriptVersionId());
+        return ApiResponse.success(screenplayService.syncScreenplayToYaml(
+            projectId,
+            request.getScriptVersionId(),
+            request.getTitle(),
+            request.getMarkdownContent()
+        ));
+    }
+
+    /**
+     * 保存正式剧本编辑结果，并生成新的剧本版本。
+     *
+     * @param projectId 项目 ID
+     * @param request 正式剧本保存请求
+     * @return 新生成的 YAML 版本响应
+     */
+    @PostMapping("/{projectId}/screenplays/save")
+    public ApiResponse<AdaptationScriptResponse> saveScreenplay(
+        @PathVariable @Min(1) Long projectId,
+        @Valid @RequestBody ScreenplaySaveRequest request
+    ) {
+        log.info("收到正式剧本保存请求，项目ID：{}，原版本ID：{}", projectId, request.getScriptVersionId());
+        return ApiResponse.success(screenplayService.saveScreenplay(
+            projectId,
+            request.getScriptVersionId(),
+            request.getTitle(),
+            request.getMarkdownContent()
+        ));
+    }
+
+    /**
+     * 导出指定剧本版本对应的正式剧本文本。
+     *
+     * @param projectId 项目 ID
+     * @param scriptVersionId 剧本版本 ID
+     * @param format 导出格式
+     * @return 文件下载响应
+     */
+    @GetMapping("/{projectId}/screenplays/{scriptVersionId}/export")
+    public ResponseEntity<byte[]> exportScreenplay(
+        @PathVariable @Min(1) Long projectId,
+        @PathVariable @Min(1) Long scriptVersionId,
+        @RequestParam String format
+    ) {
+        log.info("收到正式剧本导出请求，项目ID：{}，剧本版本ID：{}，格式：{}", projectId, scriptVersionId, format);
+        String normalizedFormat = normalizeExportFormat(format);
+        String content = "txt".equals(normalizedFormat)
+            ? screenplayService.exportPlainText(projectId, scriptVersionId)
+            : screenplayService.exportMarkdown(projectId, scriptVersionId);
+        ScreenplayResponse screenplayResponse = screenplayService.getScreenplay(projectId, scriptVersionId);
+        String fileName = buildExportFileName(screenplayResponse.getTitle(), normalizedFormat);
+        MediaType mediaType = "txt".equals(normalizedFormat)
+            ? MediaType.TEXT_PLAIN
+            : MediaType.parseMediaType("text/markdown");
+
+        return ResponseEntity.ok()
+            .contentType(mediaType)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+            .body(content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * 规范化导出格式参数。
+     *
+     * @param format 原始导出格式
+     * @return 规范化后的导出格式
+     */
+    private String normalizeExportFormat(String format) {
+        if (!"md".equalsIgnoreCase(format) && !"txt".equalsIgnoreCase(format)) {
+            throw new IllegalArgumentException("导出格式仅支持 md 或 txt。");
+        }
+        return format.toLowerCase();
+    }
+
+    /**
+     * 构建导出文件名。
+     *
+     * @param title 剧本标题
+     * @param format 导出格式
+     * @return 导出文件名
+     */
+    private String buildExportFileName(String title, String format) {
+        String safeTitle = title == null ? "screenplay" : title.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+        if (safeTitle.isBlank()) {
+            safeTitle = "screenplay";
+        }
+        return safeTitle + "." + format;
     }
 }
