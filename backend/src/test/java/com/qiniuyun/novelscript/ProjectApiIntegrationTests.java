@@ -2,6 +2,7 @@ package com.qiniuyun.novelscript;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -141,7 +142,67 @@ class ProjectApiIntegrationTests {
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data[0].projectId").value(projectId))
             .andExpect(jsonPath("$.data[0].chapterNo").value(1))
-            .andExpect(jsonPath("$.data[0].title").value("第一章"));
+            .andExpect(jsonPath("$.data[0].title").value("第一章"))
+            .andExpect(jsonPath("$.data[0].content").value("夜色降临，旧码头只剩潮水声。"));
+    }
+
+    /**
+     * 验证章节列表返回正文内容，并允许用户更新章节标题与正文。
+     */
+    @Test
+    void test_pr4_4_update_chapter_content() throws Exception {
+        MvcResult projectResult = mockMvc.perform(
+                post("/api/projects")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "title": "章节编辑测试项目",
+                          "description": "用于验证章节查看与编辑"
+                        }
+                        """)
+            )
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        Long projectId = extractProjectId(projectResult);
+
+        MvcResult chapterResult = mockMvc.perform(
+                post("/api/projects/{projectId}/chapters", projectId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "chapterNo": 1,
+                          "title": "雨夜回城",
+                          "content": "她在雨夜里重新回到了旧城。"
+                        }
+                        """)
+            )
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.content").value("她在雨夜里重新回到了旧城。"))
+            .andReturn();
+
+        Long chapterId = extractChapterId(chapterResult);
+
+        mockMvc.perform(
+                put("/api/projects/{projectId}/chapters/{chapterId}", projectId, chapterId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "title": "雨夜回城·修订版",
+                          "content": "她在雨夜里重新回到了旧城，街灯把影子拉得很长。"
+                        }
+                        """)
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.chapterNo").value(1))
+            .andExpect(jsonPath("$.data.title").value("雨夜回城·修订版"))
+            .andExpect(jsonPath("$.data.content").value("她在雨夜里重新回到了旧城，街灯把影子拉得很长。"));
+
+        mockMvc.perform(get("/api/projects/{projectId}/chapters", projectId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].title").value("雨夜回城·修订版"))
+            .andExpect(jsonPath("$.data[0].content").value("她在雨夜里重新回到了旧城，街灯把影子拉得很长。"));
     }
 
     /**
@@ -224,7 +285,7 @@ class ProjectApiIntegrationTests {
                     .content("""
                         {
                           "title": "作者精修版",
-                          "yamlContent": "schema_version: \\"1.0\\"\\nproject:\\n  id: \\"project_1001\\"\\n  title: \\"保存版本测试项目\\"\\n  source_chapters: [1, 2, 3]\\n  adaptation_mode: \\"novel_to_screenplay\\"\\nstory_bible:\\n  characters:\\n    - id: \\"char_a\\"\\n      name: \\"阿曜\\"\\n  relationships: []\\n  locations: []\\n  timeline: []\\n  conflicts: []\\n  foreshadowing: []\\n  adaptation_strategy: []\\nepisodes:\\n  - id: \\"ep01\\"\\n    title: \\"作者精修版\\"\\n    premise: \\"保留核心冲突\\"\\n    source_refs: [\\"chapter:1\\"]\\n    scenes:\\n      - id: \\"sc01\\"\\n        slugline: \\"INT. 仓库 - NIGHT\\"\\n        purpose: \\"展示修订版内容\\"\\n        source_refs: [\\"chapter:1\\"]\\n        characters: [\\"char_a\\"]\\n        actions: [\\"阿曜推开仓库门。\\"]\\n        beats: []\\n        dialogue:\\n          - character_id: \\"char_a\\"\\n            line: \\"这里比我记忆里还冷。\\"\\n        transition: \\"CUT_TO\\"\\nmetadata:\\n  generated_at: \\"2026-06-06T14:10:00+08:00\\"\\n  generator: \\"deepseek-chat\\"\\n  notes: []\\n"
+                          "yamlContent": "schema_version: \\"1.0\\"\\nproject:\\n  id: \\"project_1001\\"\\n  title: \\"保存版本测试项目\\"\\n  source_chapters: [1, 2, 3]\\n  adaptation_mode: \\"novel_to_screenplay\\"\\nstory_bible:\\n  characters:\\n    - id: \\"char_a\\"\\n      name: \\"阿朔\\"\\n  relationships: []\\n  locations: []\\n  timeline: []\\n  conflicts: []\\n  foreshadowing: []\\n  adaptation_strategy: []\\nepisodes:\\n  - id: \\"ep01\\"\\n    title: \\"作者精修版\\"\\n    premise: \\"保留核心冲突\\"\\n    source_refs: [\\"chapter:1\\"]\\n    scenes:\\n      - id: \\"sc01\\"\\n        slugline: \\"INT. 仓库 - NIGHT\\"\\n        purpose: \\"展示修订版内容\\"\\n        source_refs: [\\"chapter:1\\"]\\n        characters: [\\"char_a\\"]\\n        actions: [\\"阿朔推开仓库门。\\"]\\n        beats: []\\n        dialogue:\\n          - character_id: \\"char_a\\"\\n            line: \\"这里比我记忆里还冷。\\"\\n        transition: \\"CUT_TO\\"\\nmetadata:\\n  generated_at: \\"2026-06-06T14:10:00+08:00\\"\\n  generator: \\"deepseek-chat\\"\\n  notes: []\\n"
                         }
                         """)
             )
@@ -323,7 +384,7 @@ class ProjectApiIntegrationTests {
             story_bible:
               characters:
                 - id: "char_a"
-                  name: "阿曜"
+                  name: "阿朔"
               relationships: []
               locations: []
               timeline: []
@@ -341,7 +402,7 @@ class ProjectApiIntegrationTests {
                     purpose: "建立悬疑基调"
                     source_refs: ["chapter:1"]
                     characters: ["char_a"]
-                    actions: ["阿曜走进昏暗仓库。"]
+                    actions: ["阿朔走进昏暗仓库。"]
                     beats: []
                     dialogue:
                       - character_id: "char_a"
@@ -362,6 +423,18 @@ class ProjectApiIntegrationTests {
      * @throws Exception 当解析响应失败时抛出
      */
     private Long extractProjectId(MvcResult result) throws Exception {
+        JsonNode jsonNode = objectMapper.readTree(result.getResponse().getContentAsString());
+        return jsonNode.path("data").path("id").asLong();
+    }
+
+    /**
+     * 从创建章节响应中提取章节 ID。
+     *
+     * @param result 创建章节后的响应结果
+     * @return 章节 ID
+     * @throws Exception 当解析响应失败时抛出
+     */
+    private Long extractChapterId(MvcResult result) throws Exception {
         JsonNode jsonNode = objectMapper.readTree(result.getResponse().getContentAsString());
         return jsonNode.path("data").path("id").asLong();
     }

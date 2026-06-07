@@ -101,7 +101,6 @@ describe("ScriptPreviewPanel", () => {
         onValidate={() => {}}
         onSave={() => {}}
         onExportYaml={() => {}}
-        onOpenScreenplay={() => {}}
       />
     );
 
@@ -112,17 +111,16 @@ describe("ScriptPreviewPanel", () => {
     expect(screen.getByDisplayValue("作者精修版")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "字段说明" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "导出 YAML" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "查看正式剧本" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "查看正式剧本" })).not.toBeInTheDocument();
   });
 
-  it("should trigger version switch validate save export and open-screenplay callbacks", () => {
+  it("should trigger version switch validate save and export callbacks", () => {
     const handleSelectVersion = vi.fn();
     const handleDraftTitleChange = vi.fn();
     const handleDraftYamlChange = vi.fn();
     const handleValidate = vi.fn();
     const handleSave = vi.fn();
     const handleExportYaml = vi.fn();
-    const handleOpenScreenplay = vi.fn();
 
     render(
       <ScriptPreviewPanel
@@ -176,7 +174,6 @@ describe("ScriptPreviewPanel", () => {
         onValidate={handleValidate}
         onSave={handleSave}
         onExportYaml={handleExportYaml}
-        onOpenScreenplay={handleOpenScreenplay}
       />
     );
 
@@ -186,7 +183,6 @@ describe("ScriptPreviewPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "校验 YAML" }));
     fireEvent.click(screen.getByRole("button", { name: "另存为新版本" }));
     fireEvent.click(screen.getByRole("button", { name: "导出 YAML" }));
-    fireEvent.click(screen.getByRole("button", { name: "查看正式剧本" }));
 
     expect(handleSelectVersion).toHaveBeenCalledWith(11);
     expect(handleDraftTitleChange).toHaveBeenCalledWith("终稿");
@@ -194,7 +190,6 @@ describe("ScriptPreviewPanel", () => {
     expect(handleValidate).toHaveBeenCalled();
     expect(handleSave).toHaveBeenCalled();
     expect(handleExportYaml).toHaveBeenCalled();
-    expect(handleOpenScreenplay).toHaveBeenCalled();
   });
 
   it("should open field guide drawer when clicking the field guide button", () => {
@@ -240,7 +235,6 @@ describe("ScriptPreviewPanel", () => {
         onValidate={() => {}}
         onSave={() => {}}
         onExportYaml={() => {}}
-        onOpenScreenplay={() => {}}
       />
     );
 

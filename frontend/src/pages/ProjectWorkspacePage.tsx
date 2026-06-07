@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Form, Input, List, Space, Spin, Tabs, Tag, Typography, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
@@ -17,6 +17,7 @@ import {
   renderProjectScreenplay,
   saveProjectScreenplay,
   saveProjectScriptVersion,
+  updateProjectChapter,
   validateProjectScript
 } from "../api/projects";
 import { ScreenplayActionPanel } from "../components/screenplay/ScreenplayActionPanel";
@@ -26,7 +27,7 @@ import { AdaptationStatusPanel } from "../components/workspace/AdaptationStatusP
 import { ScriptPreviewPanel } from "../components/workspace/ScriptPreviewPanel";
 import { StoryBiblePanel } from "../components/workspace/StoryBiblePanel";
 import type { AdaptationScript, ScriptValidationResult } from "../types/adaptation";
-import type { CreateChapterPayload } from "../types/project";
+import type { CreateChapterPayload, SourceChapter, UpdateChapterPayload } from "../types/project";
 import { getNextChapterNo } from "../utils/chapter";
 import { saveRecentProjectId } from "../utils/recent-projects";
 
@@ -56,6 +57,7 @@ export function ProjectWorkspacePage() {
   const [form] = Form.useForm<ChapterFormValues>();
   const [activeTab, setActiveTab] = useState<string>(TAB_KEYS.chapters);
   const [watchingJobId, setWatchingJobId] = useState<number | null>(null);
+  const [editingChapterId, setEditingChapterId] = useState<number | null>(null);
   const [selectedScriptVersionId, setSelectedScriptVersionId] = useState<number | null>(null);
   const [draftSourceVersionId, setDraftSourceVersionId] = useState<number | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
@@ -121,12 +123,12 @@ export function ProjectWorkspacePage() {
   });
 
   useEffect(() => {
-    if (chaptersQuery.data) {
+    if (chaptersQuery.data && editingChapterId === null) {
       form.setFieldsValue({
         chapterNo: getNextChapterNo(chaptersQuery.data)
       });
     }
-  }, [chaptersQuery.data, form]);
+  }, [chaptersQuery.data, editingChapterId, form]);
 
   useEffect(() => {
     const versionSummaries = scriptVersionsQuery.data ?? [];
@@ -199,6 +201,22 @@ export function ProjectWorkspacePage() {
       form.resetFields(["title", "content"]);
       form.setFieldsValue({ chapterNo: chapter.chapterNo + 1 });
       message.success(`第 ${chapter.chapterNo} 章已保存。`);
+    },
+    onError: (error: Error) => {
+      message.error(error.message);
+    }
+  });
+
+  const updateChapterMutation = useMutation({
+    mutationFn: ({ chapterId, payload }: { chapterId: number; payload: UpdateChapterPayload }) =>
+      updateProjectChapter(numericProjectId, chapterId, payload),
+    onSuccess: async (chapter) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["project", numericProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-chapters", numericProjectId] })
+      ]);
+      handleStopEditing(chapter.chapterNo + 1);
+      message.success(`第 ${chapter.chapterNo} 章已更新。`);
     },
     onError: (error: Error) => {
       message.error(error.message);
@@ -313,79 +331,80 @@ export function ProjectWorkspacePage() {
 
   const selectedScript = selectedScriptQuery.data ?? null;
   const selectedScreenplay = selectedScreenplayQuery.data ?? null;
+  const chapters = chaptersQuery.data ?? [];
   const hasUnsavedChanges = Boolean(
-    selectedScript &&
-      (draftTitle !== selectedScript.title || draftYamlContent !== selectedScript.yamlContent)
+    selectedScript && (draftTitle !== selectedScript.title || draftYamlContent !== selectedScript.yamlContent)
   );
   const hasUnsavedScreenplayChanges = Boolean(
     selectedScreenplay &&
       (screenplayDraftTitle !== selectedScreenplay.title ||
         screenplayDraftMarkdownContent !== selectedScreenplay.markdownContent)
   );
+  const isEditingChapter = editingChapterId !== null;
 
-  const chapterTabContent = useMemo(() => {
-    const chapters = chaptersQuery.data ?? [];
+  /**
+   * 停止章节编辑模式，并恢复到下一章节录入状态。
+   *
+   * @param nextChapterNo 下一次默认填充的章节号
+   */
+  function handleStopEditing(nextChapterNo?: number) {
+    setEditingChapterId(null);
+    form.resetFields(["title", "content"]);
+    form.setFieldsValue({
+      chapterNo: nextChapterNo ?? getNextChapterNo(chapters)
+    });
+  }
 
-    return (
-      <div className="workspace-tab-stack">
-        <section className="panel panel-soft">
-          <div className="panel-heading">
-            <Typography.Text className="eyebrow">章节录入</Typography.Text>
-            <Typography.Title level={3}>持续补充原始小说章节</Typography.Title>
-          </div>
-          <Form
-            layout="vertical"
-            form={form}
-            onFinish={(values) =>
-              createChapterMutation.mutate({
-                chapterNo: Number(values.chapterNo),
-                title: values.title,
-                content: values.content,
-                wordCount: values.content.length
-              })
-            }
-            initialValues={{ chapterNo: getNextChapterNo(chapters) }}
-          >
-            <Form.Item label="章节号" name="chapterNo" rules={[{ required: true, message: "请填写章节号" }]}>
-              <Input type="number" size="large" />
-            </Form.Item>
-            <Form.Item
-              label="章节标题"
-              name="title"
-              rules={[{ max: 255, message: "章节标题不能超过 255 个字符" }]}
-            >
-              <Input placeholder="例如：风吹过旧码头" size="large" />
-            </Form.Item>
-            <Form.Item label="章节正文" name="content" rules={[{ required: true, message: "请填写章节正文" }]}>
-              <Input.TextArea rows={12} placeholder="粘贴这一章的正文内容。" />
-            </Form.Item>
-            <Button type="primary" htmlType="submit" size="large" loading={createChapterMutation.isPending}>
-              保存当前章节
-            </Button>
-          </Form>
-        </section>
+  /**
+   * 打开指定章节的查看与编辑表单。
+   *
+   * @param chapter 目标章节
+   */
+  function openChapterForEditing(chapter: SourceChapter) {
+    setEditingChapterId(chapter.id);
+    form.setFieldsValue({
+      chapterNo: chapter.chapterNo,
+      title: chapter.title ?? undefined,
+      content: chapter.content
+    });
+  }
 
-        <section className="panel">
-          <div className="panel-heading">
-            <Typography.Text className="eyebrow">章节概览</Typography.Text>
-            <Typography.Title level={4}>当前项目已录入章节</Typography.Title>
-          </div>
-          <List
-            dataSource={chapters}
-            locale={{ emptyText: "还没有章节，先录入第一章吧。" }}
-            renderItem={(chapter) => (
-              <List.Item className="chapter-list-item">
-                <List.Item.Meta
-                  title={`第 ${chapter.chapterNo} 章${chapter.title ? ` · ${chapter.title}` : ""}`}
-                  description={`字数：${chapter.wordCount}`}
-                />
-              </List.Item>
-            )}
-          />
-        </section>
-      </div>
-    );
-  }, [chaptersQuery.data, createChapterMutation, form]);
+  /**
+   * 提交章节表单，按当前模式选择创建或更新。
+   *
+   * @param values 表单值
+   */
+  function handleSubmitChapter(values: ChapterFormValues) {
+    if (editingChapterId !== null) {
+      updateChapterMutation.mutate({
+        chapterId: editingChapterId,
+        payload: {
+          title: values.title,
+          content: values.content,
+          wordCount: values.content.length
+        }
+      });
+      return;
+    }
+
+    createChapterMutation.mutate({
+      chapterNo: Number(values.chapterNo),
+      title: values.title,
+      content: values.content,
+      wordCount: values.content.length
+    });
+  }
+
+  /**
+   * 切换剧本版本时同步清空当前草稿来源标记。
+   *
+   * @param scriptVersionId 剧本版本 ID
+   */
+  function handleSelectScriptVersion(scriptVersionId: number) {
+    setSelectedScriptVersionId(scriptVersionId);
+    setDraftSourceVersionId(null);
+    setScreenplayDraftSourceVersionId(null);
+  }
 
   if (!isValidProjectId) {
     return (
@@ -413,9 +432,7 @@ export function ProjectWorkspacePage() {
       <main className="page-shell">
         <div className="panel">
           <Typography.Title level={3}>项目加载失败</Typography.Title>
-          <Typography.Paragraph>
-            {projectQuery.error instanceof Error ? projectQuery.error.message : "请稍后重试。"}
-          </Typography.Paragraph>
+          <Typography.Paragraph>{projectQuery.error instanceof Error ? projectQuery.error.message : "请稍后重试。"}</Typography.Paragraph>
           <Button onClick={() => navigate("/")}>返回首页</Button>
         </div>
       </main>
@@ -487,9 +504,7 @@ export function ProjectWorkspacePage() {
           type="error"
           showIcon
           message="正式剧本查询失败"
-          description={
-            selectedScreenplayQuery.error instanceof Error ? selectedScreenplayQuery.error.message : "请稍后重试。"
-          }
+          description={selectedScreenplayQuery.error instanceof Error ? selectedScreenplayQuery.error.message : "请稍后重试。"}
         />
       ) : null}
 
@@ -501,7 +516,79 @@ export function ProjectWorkspacePage() {
             {
               key: TAB_KEYS.chapters,
               label: "章节管理",
-              children: chapterTabContent
+              children: (
+                <div className="workspace-tab-stack">
+                  <section className="panel panel-soft">
+                    <div className="panel-heading">
+                      <Typography.Text className="eyebrow">{isEditingChapter ? "章节查看 / 编辑" : "章节录入"}</Typography.Text>
+                      <Typography.Title level={3}>
+                        {isEditingChapter ? "查看并修改当前章节内容" : "持续补充原始小说章节"}
+                      </Typography.Title>
+                    </div>
+                    <Form
+                      layout="vertical"
+                      form={form}
+                      onFinish={handleSubmitChapter}
+                      initialValues={{ chapterNo: getNextChapterNo(chapters) }}
+                    >
+                      <Form.Item label="章节号" name="chapterNo" rules={[{ required: true, message: "请填写章节号" }]}>
+                        <Input type="number" size="large" disabled={isEditingChapter} />
+                      </Form.Item>
+                      <Form.Item
+                        label="章节标题"
+                        name="title"
+                        rules={[{ max: 255, message: "章节标题不能超过 255 个字符" }]}
+                      >
+                        <Input placeholder="例如：风吹过旧码头" size="large" />
+                      </Form.Item>
+                      <Form.Item label="章节正文" name="content" rules={[{ required: true, message: "请填写章节正文" }]}>
+                        <Input.TextArea rows={12} placeholder="粘贴这一章的正文内容。" />
+                      </Form.Item>
+                      <Space wrap>
+                        <Button
+                          type="primary"
+                          htmlType="submit"
+                          size="large"
+                          loading={createChapterMutation.isPending || updateChapterMutation.isPending}
+                        >
+                          {isEditingChapter ? "保存章节修改" : "保存当前章节"}
+                        </Button>
+                        {isEditingChapter ? (
+                          <Button size="large" onClick={() => handleStopEditing()}>
+                            取消查看 / 编辑
+                          </Button>
+                        ) : null}
+                      </Space>
+                    </Form>
+                  </section>
+
+                  <section className="panel">
+                    <div className="panel-heading">
+                      <Typography.Text className="eyebrow">章节概览</Typography.Text>
+                      <Typography.Title level={4}>当前项目已录入章节</Typography.Title>
+                    </div>
+                    <List
+                      dataSource={chapters}
+                      locale={{ emptyText: "还没有章节，先录入第一章吧。" }}
+                      renderItem={(chapter) => (
+                        <List.Item
+                          className="chapter-list-item"
+                          actions={[
+                            <Button key={`view-${chapter.id}`} type="link" onClick={() => openChapterForEditing(chapter)}>
+                              查看 / 编辑
+                            </Button>
+                          ]}
+                        >
+                          <List.Item.Meta
+                            title={`第 ${chapter.chapterNo} 章${chapter.title ? ` · ${chapter.title}` : ""}`}
+                            description={`字数：${chapter.wordCount}`}
+                          />
+                        </List.Item>
+                      )}
+                    />
+                  </section>
+                </div>
+              )
             },
             {
               key: TAB_KEYS.progress,
@@ -512,8 +599,6 @@ export function ProjectWorkspacePage() {
                   isStarting={generateScriptMutation.isPending}
                   latestJob={latestJobQuery.data ?? null}
                   latestScript={latestScriptQuery.data ?? null}
-                  onOpenStoryBible={() => setActiveTab(TAB_KEYS.storyBible)}
-                  onOpenYamlPreview={() => setActiveTab(TAB_KEYS.yaml)}
                   onStart={() => generateScriptMutation.mutate()}
                 />
               )
@@ -522,10 +607,7 @@ export function ProjectWorkspacePage() {
               key: TAB_KEYS.storyBible,
               label: "Story Bible",
               children: (
-                <StoryBiblePanel
-                  storyBible={latestStoryBibleQuery.data ?? null}
-                  isLoading={latestStoryBibleQuery.isLoading}
-                />
+                <StoryBiblePanel storyBible={latestStoryBibleQuery.data ?? null} isLoading={latestStoryBibleQuery.isLoading} />
               )
             },
             {
@@ -543,11 +625,7 @@ export function ProjectWorkspacePage() {
                   isDetailLoading={selectedScriptQuery.isLoading}
                   isValidating={validateScriptMutation.isPending}
                   isSaving={saveScriptVersionMutation.isPending}
-                  onSelectVersion={(scriptVersionId) => {
-                    setSelectedScriptVersionId(scriptVersionId);
-                    setDraftSourceVersionId(null);
-                    setScreenplayDraftSourceVersionId(null);
-                  }}
+                  onSelectVersion={handleSelectScriptVersion}
                   onDraftTitleChange={setDraftTitle}
                   onDraftYamlChange={(value) => {
                     setDraftYamlContent(value);
@@ -556,15 +634,8 @@ export function ProjectWorkspacePage() {
                   onValidate={() => validateScriptMutation.mutate()}
                   onSave={() => saveScriptVersionMutation.mutate()}
                   onExportYaml={() => {
-                    downloadTextFile(
-                      `${sanitizeFileName(draftTitle || "script")}.yaml`,
-                      draftYamlContent,
-                      "text/yaml"
-                    );
+                    downloadTextFile(`${sanitizeFileName(draftTitle || "script")}.yaml`, draftYamlContent, "text/yaml");
                     message.success("YAML 文件已开始下载。");
-                  }}
-                  onOpenScreenplay={() => {
-                    setActiveTab(TAB_KEYS.screenplay);
                   }}
                 />
               )
@@ -579,8 +650,8 @@ export function ProjectWorkspacePage() {
                     <Typography.Title level={4}>面向作者阅读与润色的剧本视图</Typography.Title>
                   </div>
                   <Typography.Paragraph className="panel-copy">
-                    这里展示的是由 YAML 结构稿渲染得到的正式剧本视图。你可以切换版本、重新渲染、直接编辑并保存回
-                    YAML，同时导出 Markdown 或 TXT。
+                    这里展示的是由 YAML 结构稿渲染得到的正式剧本视图。你可以切换版本、重新渲染、直接编辑并保存回 YAML，
+                    同时导出 Markdown 或 TXT。
                   </Typography.Paragraph>
 
                   <div className="screenplay-workspace">
@@ -588,11 +659,7 @@ export function ProjectWorkspacePage() {
                       versionSummaries={scriptVersionsQuery.data ?? []}
                       selectedScriptVersionId={selectedScriptVersionId}
                       isLoading={scriptVersionsQuery.isLoading}
-                      onSelectVersion={(scriptVersionId) => {
-                        setSelectedScriptVersionId(scriptVersionId);
-                        setDraftSourceVersionId(null);
-                        setScreenplayDraftSourceVersionId(null);
-                      }}
+                      onSelectVersion={handleSelectScriptVersion}
                     />
 
                     <ScreenplayEditorPanel
@@ -619,7 +686,6 @@ export function ProjectWorkspacePage() {
                       onExportText={() => {
                         void downloadScreenplay(numericProjectId, selectedScriptVersionId, "txt");
                       }}
-                      onBackToYaml={() => setActiveTab(TAB_KEYS.yaml)}
                     />
                   </div>
                 </section>
@@ -708,7 +774,7 @@ async function downloadScreenplay(projectId: number, scriptVersionId: number | n
  * 将标题规范化为适合下载的文件名。
  *
  * @param value 原始标题
- * @returns 可用于文件下载的安全名称
+ * @returns 安全文件名
  */
 function sanitizeFileName(value: string) {
   const nextValue = value.trim().replace(/[\\/:*?"<>|]/g, "_");

@@ -5,6 +5,8 @@
 ## 核心功能
 
 - 按项目持续录入多章节小说内容
+- 首页通过项目下拉框快速进入已有工作台
+- 章节管理支持录入、查看和编辑章节正文
 - 通过分阶段流水线生成结构化剧本 YAML 初稿
 - 构建并保存项目级 `Story Bible`
 - 支持 YAML 版本切换、后端 Schema 校验和另存新版本
@@ -133,19 +135,24 @@ npm run dev
 
 ## 页面说明
 
+首页：
+
+- `新建项目`：创建新的小说改编项目
+- `继续已有项目`：通过下拉框选择已有项目并进入工作台
+
 项目工作台：
 
-- `章节管理`：录入和查看小说章节
+- `章节管理`：录入、查看和编辑小说章节
 - `改编进度`：启动改编任务，查看分阶段进度条和任务状态
 - `Story Bible`：查看人物、关系、地点、时间线、冲突和伏笔
-- `YAML 初稿`：编辑结构化剧本、查看字段说明、执行校验、导出 YAML，并一键切换到正式剧本 Tab
-- `正式剧本`：查看渲染后的可读剧本、重新渲染、直接编辑、保存回写 YAML、导出 Markdown/TXT
+- `YAML 初稿`：编辑结构化剧本、查看字段说明、执行校验、导出 YAML
+- `正式剧本`：查看渲染后的可读剧本、直接编辑、保存回写 YAML、导出 Markdown/TXT
 
 正式剧本工作区布局：
 
 - 左侧：剧本版本列表
-- 中间：正式剧本 Markdown 编辑器
-- 右侧：重新渲染、保存并回写 YAML、导出 Markdown/TXT、切回 YAML 初稿
+- 中间：正式剧本 Markdown 编辑区
+- 右侧：重新渲染、保存并回写 YAML、导出 Markdown/TXT
 
 ## 主要接口
 
@@ -156,6 +163,7 @@ npm run dev
 - `GET /api/projects`
 - `GET /api/projects/{projectId}`
 - `POST /api/projects/{projectId}/chapters`
+- `PUT /api/projects/{projectId}/chapters/{chapterId}`
 - `GET /api/projects/{projectId}/chapters`
 
 改编流水线接口：

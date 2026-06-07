@@ -21,3 +21,6 @@
    `summary`、`characters`、`locations`、`events`、`conflicts`、`emotion_changes`、`foreshadowing`、`key_dialogues`、`source_refs`
 4. 所有列表字段必须返回数组；没有内容时返回空数组。
 5. `source_refs` 必须保留当前章节引用，例如 `["chapter:1"]`。
+6. `characters` 必须是“人物名称”字符串数组，不要返回带 `name`、`role` 的对象。
+7. `locations` 必须是“地点名称”字符串数组，不要返回对象。
+8. `events`、`conflicts`、`emotion_changes`、`foreshadowing`、`key_dialogues` 也必须返回字符串数组。

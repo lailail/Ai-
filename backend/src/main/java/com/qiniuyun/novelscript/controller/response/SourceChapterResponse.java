@@ -24,6 +24,9 @@ public class SourceChapterResponse {
     /** 章节标题。 */
     private final String title;
 
+    /** 章节正文。 */
+    private final String content;
+
     /** 章节字数。 */
     private final Integer wordCount;
 
@@ -45,6 +48,7 @@ public class SourceChapterResponse {
             chapter.getProjectId(),
             chapter.getChapterNo(),
             chapter.getTitle(),
+            chapter.getContent(),
             chapter.getWordCount(),
             chapter.getCreatedAt(),
             chapter.getUpdatedAt()

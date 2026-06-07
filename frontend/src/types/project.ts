@@ -13,6 +13,7 @@ export interface SourceChapter {
   projectId: number;
   chapterNo: number;
   title: string | null;
+  content: string;
   wordCount: number;
   createdAt: string | null;
   updatedAt: string | null;
@@ -25,6 +26,12 @@ export interface CreateProjectPayload {
 
 export interface CreateChapterPayload {
   chapterNo: number;
+  title?: string;
+  content: string;
+  wordCount?: number;
+}
+
+export interface UpdateChapterPayload {
   title?: string;
   content: string;
   wordCount?: number;

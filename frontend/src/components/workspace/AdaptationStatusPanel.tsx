@@ -8,18 +8,17 @@ type AdaptationStatusPanelProps = {
   isStarting: boolean;
   latestJob: AdaptationJobSnapshot | null;
   latestScript: AdaptationScript | null;
-  onOpenStoryBible: () => void;
-  onOpenYamlPreview: () => void;
   onStart: () => void;
 };
 
+/**
+ * 展示项目当前的改编进度和最新结果摘要。
+ */
 export function AdaptationStatusPanel({
   chapterCount,
   isStarting,
   latestJob,
   latestScript,
-  onOpenStoryBible,
-  onOpenYamlPreview,
   onStart
 }: AdaptationStatusPanelProps) {
   const enabled = canStartAdaptation(chapterCount);
@@ -90,10 +89,6 @@ export function AdaptationStatusPanel({
             </Tag>
           </Space>
           <Typography.Paragraph className="status-note">{latestScript.title}</Typography.Paragraph>
-          <Space wrap>
-            <Button onClick={onOpenStoryBible}>查看 Story Bible</Button>
-            <Button onClick={onOpenYamlPreview}>查看 YAML 初稿</Button>
-          </Space>
         </div>
       ) : null}
 

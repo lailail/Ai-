@@ -8,6 +8,7 @@ import com.qiniuyun.novelscript.controller.request.ScreenplaySyncYamlRequest;
 import com.qiniuyun.novelscript.controller.request.ScriptValidateRequest;
 import com.qiniuyun.novelscript.controller.request.ScriptVersionSaveRequest;
 import com.qiniuyun.novelscript.controller.request.SourceChapterCreateRequest;
+import com.qiniuyun.novelscript.controller.request.SourceChapterUpdateRequest;
 import com.qiniuyun.novelscript.controller.response.AdaptationJobResponse;
 import com.qiniuyun.novelscript.controller.response.AdaptationScriptResponse;
 import com.qiniuyun.novelscript.controller.response.ProjectResponse;
@@ -24,8 +25,8 @@ import com.qiniuyun.novelscript.service.ScriptVersionService;
 import com.qiniuyun.novelscript.service.SourceChapterService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -36,6 +37,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -145,6 +147,24 @@ public class ProjectController {
     public ApiResponse<List<SourceChapterResponse>> listChapters(@PathVariable @Min(1) Long projectId) {
         log.info("收到查询章节列表请求，项目ID：{}", projectId);
         return ApiResponse.success(sourceChapterService.listChapters(projectId));
+    }
+
+    /**
+     * 更新指定项目下某一章的标题和正文。
+     *
+     * @param projectId 项目 ID
+     * @param chapterId 章节 ID
+     * @param request 章节更新请求
+     * @return 更新后的章节响应
+     */
+    @PutMapping("/{projectId}/chapters/{chapterId}")
+    public ApiResponse<SourceChapterResponse> updateChapter(
+        @PathVariable @Min(1) Long projectId,
+        @PathVariable @Min(1) Long chapterId,
+        @Valid @RequestBody SourceChapterUpdateRequest request
+    ) {
+        log.info("收到更新章节请求，项目ID：{}，章节ID：{}", projectId, chapterId);
+        return ApiResponse.success(sourceChapterService.updateChapter(projectId, chapterId, request));
     }
 
     /**
@@ -405,11 +425,11 @@ public class ProjectController {
     }
 
     /**
-     * 构建仅包含 ASCII 字符的回退文件名，避免 Servlet 容器在响应头编码阶段报错。
+     * 构建仅包含 ASCII 字符的回退文件名，避免响应头编码报错。
      *
      * @param versionNo 剧本版本号
      * @param format 导出格式
-     * @return 仅包含 ASCII 字符的安全文件名
+     * @return 安全的 ASCII 文件名
      */
     private String buildAsciiExportFileName(Integer versionNo, String format) {
         int safeVersionNo = versionNo == null ? 1 : versionNo;
@@ -421,7 +441,7 @@ public class ProjectController {
      *
      * @param asciiFileName ASCII 回退文件名
      * @param utf8FileName 原始 UTF-8 文件名
-     * @return 可直接写入响应头的 Content-Disposition 值
+     * @return Content-Disposition 头值
      */
     private String buildContentDispositionHeader(String asciiFileName, String utf8FileName) {
         String encodedFileName = URLEncoder.encode(utf8FileName, StandardCharsets.UTF_8).replace("+", "%20");

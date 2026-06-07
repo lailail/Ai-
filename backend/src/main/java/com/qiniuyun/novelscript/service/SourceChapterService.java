@@ -1,6 +1,7 @@
 package com.qiniuyun.novelscript.service;
 
 import com.qiniuyun.novelscript.controller.request.SourceChapterCreateRequest;
+import com.qiniuyun.novelscript.controller.request.SourceChapterUpdateRequest;
 import com.qiniuyun.novelscript.controller.response.SourceChapterResponse;
 import java.util.List;
 
@@ -17,6 +18,16 @@ public interface SourceChapterService {
      * @return 保存后的章节响应
      */
     SourceChapterResponse createChapter(Long projectId, SourceChapterCreateRequest request);
+
+    /**
+     * 更新指定项目下某一章的标题和正文。
+     *
+     * @param projectId 项目 ID
+     * @param chapterId 章节 ID
+     * @param request 章节更新请求
+     * @return 更新后的章节响应
+     */
+    SourceChapterResponse updateChapter(Long projectId, Long chapterId, SourceChapterUpdateRequest request);
 
     /**
      * 查询指定项目下已经保存的章节列表。
