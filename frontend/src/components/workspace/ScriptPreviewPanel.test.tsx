@@ -249,5 +249,9 @@ describe("ScriptPreviewPanel", () => {
 
     expect(screen.getByText("YAML 字段说明")).toBeInTheDocument();
     expect(screen.getByText("story_bible")).toBeInTheDocument();
+    expect(screen.getByText("project.source_chapters[]")).toBeInTheDocument();
+    expect(screen.getByText("story_bible.characters[].aliases[]")).toBeInTheDocument();
+    expect(screen.getByText("episodes[].scenes[].dialogue[].subtext")).toBeInTheDocument();
+    expect(screen.getByText("metadata.notes[]")).toBeInTheDocument();
   });
 });
