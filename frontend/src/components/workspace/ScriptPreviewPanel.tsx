@@ -92,7 +92,7 @@ export function ScriptPreviewPanel({
               type="info"
               showIcon
               message="请选择一个剧本版本"
-              description="左侧会展示当前项目下的所有 YAML 版本，点击后即可在中间工作区查看和编辑。"
+              description="左侧会展示当前项目下的所有 YAML 版本，选择后即可在中间工作区查看和编辑。"
             />
           ) : (
             <>

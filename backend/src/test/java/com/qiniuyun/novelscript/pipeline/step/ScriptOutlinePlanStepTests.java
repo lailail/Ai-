@@ -91,6 +91,43 @@ class ScriptOutlinePlanStepTests {
     }
 
     /**
+     * 验证单集、单场景和列表字段被返回为字符串时仍能兼容解析。
+     */
+    @Test
+    void test_p3_c4_outline_plan_accepts_single_object_and_string_lists() {
+        when(promptTemplateService.render(eq("script-outline-plan"), anyMap())).thenReturn("plan outline");
+        when(aiChatAdapter.chat(eq(ScriptOutlinePlanStep.SYSTEM_PROMPT), eq("plan outline"))).thenReturn("""
+            {
+              "episodes": {
+                "id": "ep02",
+                "title": "雨夜旧城",
+                "premise": "江宁回城后被旧案重新卷入。",
+                "source_refs": "chapter:1, chapter:2, chapter:3",
+                "scenes": {
+                  "id": "sc02",
+                  "slugline": "EXT. 旧城巷口 - 夜",
+                  "purpose": "建立悬疑氛围",
+                  "conflict": "江宁犹豫是否继续追查",
+                  "source_refs": "chapter:1",
+                  "characters": "char_jiangning、char_qinzhou"
+                }
+              }
+            }
+            """);
+
+        ScriptOutlineResult result = scriptOutlinePlanStep.execute(1002L, buildStoryBible(), buildChapterContexts());
+
+        assertThat(result.getProjectId()).isEqualTo(1002L);
+        assertThat(result.getEpisodes()).hasSize(1);
+        ScriptOutlineEpisode episode = result.getEpisodes().get(0);
+        assertThat(episode.getTitle()).isEqualTo("雨夜旧城");
+        assertThat(episode.getSourceRefs()).containsExactly("chapter:1", "chapter:2", "chapter:3");
+        assertThat(episode.getScenes()).hasSize(1);
+        assertThat(episode.getScenes().get(0).getSourceRefs()).containsExactly("chapter:1");
+        assertThat(episode.getScenes().get(0).getCharacters()).containsExactly("char_jiangning", "char_qinzhou");
+    }
+
+    /**
      * 构造测试用 Story Bible 结果。
      *
      * @return Story Bible 结果

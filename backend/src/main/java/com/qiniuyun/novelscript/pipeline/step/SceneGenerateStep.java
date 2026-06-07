@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.qiniuyun.novelscript.ai.adapter.AiChatAdapter;
 import com.qiniuyun.novelscript.ai.prompt.PromptTemplateService;
 import com.qiniuyun.novelscript.pipeline.model.ScriptOutlineScene;
@@ -154,8 +155,92 @@ public class SceneGenerateStep {
             return rootNode;
         }
 
+        normalizeTextField(rootObject, "id");
+        normalizeTextField(rootObject, "slugline");
+        normalizeTextField(rootObject, "purpose");
+        normalizeTextField(rootObject, "transition");
+        rootObject.set("source_refs", normalizeStringArrayNode(readField(rootObject, "source_refs", "sourceRefs")));
+        rootObject.set("characters", normalizeStringArrayNode(rootObject.get("characters")));
         rootObject.set("actions", normalizeActionsNode(rootObject.get("actions")));
+        rootObject.set("beats", normalizeBeatsNode(rootObject.get("beats")));
+        rootObject.set("dialogue", normalizeDialogueNode(rootObject.get("dialogue")));
+        rootObject.set("notes", normalizeNotesNode(rootObject.get("notes")));
         return rootObject;
+    }
+
+    /**
+     * 读取节点的第一个命中字段。
+     *
+     * @param rootObject 当前对象节点
+     * @param fieldNames 候选字段名
+     * @return 命中的字段节点
+     */
+    private JsonNode readField(ObjectNode rootObject, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode fieldNode = rootObject.get(fieldName);
+            if (fieldNode != null && !fieldNode.isNull()) {
+                return fieldNode;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 将指定字段归一化为纯文本节点，兼容简单对象包装。
+     *
+     * @param rootObject 当前对象节点
+     * @param fieldName 目标字段名
+     */
+    private void normalizeTextField(ObjectNode rootObject, String fieldName) {
+        JsonNode fieldNode = rootObject.get(fieldName);
+        if (fieldNode == null || fieldNode.isNull()) {
+            return;
+        }
+
+        String value = extractReadableText(fieldNode);
+        rootObject.set(fieldName, TextNode.valueOf(value));
+    }
+
+    /**
+     * 将任意列表字段统一整理成字符串数组。
+     *
+     * @param fieldNode 原始字段节点
+     * @return 标准化后的字符串数组节点
+     */
+    private ArrayNode normalizeStringArrayNode(JsonNode fieldNode) {
+        ArrayNode normalizedValues = objectMapper.createArrayNode();
+        if (fieldNode == null || fieldNode.isNull()) {
+            return normalizedValues;
+        }
+
+        if (fieldNode.isArray()) {
+            for (JsonNode itemNode : fieldNode) {
+                addNormalizedStrings(normalizedValues, itemNode);
+            }
+            return normalizedValues;
+        }
+
+        addNormalizedStrings(normalizedValues, fieldNode);
+        return normalizedValues;
+    }
+
+    /**
+     * 将单个节点中可读的文本值拆分后写入字符串数组。
+     *
+     * @param normalizedValues 标准化字符串数组
+     * @param itemNode 原始字段节点
+     */
+    private void addNormalizedStrings(ArrayNode normalizedValues, JsonNode itemNode) {
+        String rawValue = extractReadableText(itemNode);
+        if (!StringUtils.hasText(rawValue)) {
+            return;
+        }
+
+        for (String item : splitListText(rawValue)) {
+            if (StringUtils.hasText(item)) {
+                normalizedValues.add(item.trim());
+            }
+        }
     }
 
     /**
@@ -182,6 +267,77 @@ public class SceneGenerateStep {
     }
 
     /**
+     * 将 beats 节点统一整理成对象数组。
+     *
+     * @param beatsNode 原始 beats 节点
+     * @return 标准化后的节拍数组节点
+     */
+    private ArrayNode normalizeBeatsNode(JsonNode beatsNode) {
+        ArrayNode normalizedBeats = objectMapper.createArrayNode();
+        if (beatsNode == null || beatsNode.isNull()) {
+            return normalizedBeats;
+        }
+
+        if (beatsNode.isArray()) {
+            for (JsonNode beatNode : beatsNode) {
+                addNormalizedBeat(normalizedBeats, beatNode);
+            }
+            return normalizedBeats;
+        }
+
+        addNormalizedBeat(normalizedBeats, beatsNode);
+        return normalizedBeats;
+    }
+
+    /**
+     * 将 dialogue 节点统一整理成对象数组。
+     *
+     * @param dialogueNode 原始对白节点
+     * @return 标准化后的对白数组节点
+     */
+    private ArrayNode normalizeDialogueNode(JsonNode dialogueNode) {
+        ArrayNode normalizedDialogue = objectMapper.createArrayNode();
+        if (dialogueNode == null || dialogueNode.isNull()) {
+            return normalizedDialogue;
+        }
+
+        if (dialogueNode.isArray()) {
+            for (JsonNode itemNode : dialogueNode) {
+                addNormalizedDialogue(normalizedDialogue, itemNode);
+            }
+            return normalizedDialogue;
+        }
+
+        addNormalizedDialogue(normalizedDialogue, dialogueNode);
+        return normalizedDialogue;
+    }
+
+    /**
+     * 将 notes 节点统一整理成对象节点。
+     *
+     * @param notesNode 原始备注节点
+     * @return 标准化后的备注对象
+     */
+    private ObjectNode normalizeNotesNode(JsonNode notesNode) {
+        ObjectNode normalizedNotes = objectMapper.createObjectNode();
+        if (notesNode == null || notesNode.isNull()) {
+            return normalizedNotes;
+        }
+        if (notesNode.isTextual()) {
+            normalizedNotes.put("todo", notesNode.asText().trim());
+            return normalizedNotes;
+        }
+        if (!notesNode.isObject()) {
+            return normalizedNotes;
+        }
+
+        normalizedNotes.put("emotion", extractReadableText(readObjectField(notesNode, "emotion")));
+        normalizedNotes.put("pacing", extractReadableText(readObjectField(notesNode, "pacing")));
+        normalizedNotes.put("todo", extractReadableText(readObjectField(notesNode, "todo", "notes", "remark")));
+        return normalizedNotes;
+    }
+
+    /**
      * 将单条动作写入标准化数组。
      *
      * @param normalizedActions 标准化动作数组
@@ -192,6 +348,87 @@ public class SceneGenerateStep {
         if (StringUtils.hasText(actionText)) {
             normalizedActions.add(actionText.trim());
         }
+    }
+
+    /**
+     * 将单个节拍节点写入标准化数组。
+     *
+     * @param normalizedBeats 标准化节拍数组
+     * @param beatNode 原始节拍节点
+     */
+    private void addNormalizedBeat(ArrayNode normalizedBeats, JsonNode beatNode) {
+        if (beatNode == null || beatNode.isNull()) {
+            return;
+        }
+
+        ObjectNode normalizedBeat = objectMapper.createObjectNode();
+        if (beatNode.isObject()) {
+            normalizedBeat.put("id", extractReadableText(readObjectField(beatNode, "id")));
+            normalizedBeat.put("action", extractReadableText(readObjectField(beatNode, "action", "text", "content", "summary")));
+        }
+        else {
+            normalizedBeat.put("action", extractReadableText(beatNode));
+        }
+
+        if (StringUtils.hasText(normalizedBeat.path("id").asText())
+            || StringUtils.hasText(normalizedBeat.path("action").asText())) {
+            normalizedBeats.add(normalizedBeat);
+        }
+    }
+
+    /**
+     * 将单个对白节点写入标准化数组。
+     *
+     * @param normalizedDialogue 标准化对白数组
+     * @param dialogueNode 原始对白节点
+     */
+    private void addNormalizedDialogue(ArrayNode normalizedDialogue, JsonNode dialogueNode) {
+        if (dialogueNode == null || dialogueNode.isNull()) {
+            return;
+        }
+
+        ObjectNode normalizedItem = objectMapper.createObjectNode();
+        if (dialogueNode.isObject()) {
+            normalizedItem.put(
+                "character_id",
+                extractReadableText(readObjectField(dialogueNode, "character_id", "characterId", "speaker", "name"))
+            );
+            normalizedItem.put(
+                "parenthetical",
+                extractReadableText(readObjectField(dialogueNode, "parenthetical", "emotion", "tone"))
+            );
+            normalizedItem.put("line", extractReadableText(readObjectField(dialogueNode, "line", "text", "content", "dialogue")));
+            normalizedItem.put("subtext", extractReadableText(readObjectField(dialogueNode, "subtext", "note", "notes")));
+        }
+        else {
+            normalizedItem.put("line", extractReadableText(dialogueNode));
+        }
+
+        if (StringUtils.hasText(normalizedItem.path("character_id").asText())
+            || StringUtils.hasText(normalizedItem.path("line").asText())
+            || StringUtils.hasText(normalizedItem.path("subtext").asText())) {
+            normalizedDialogue.add(normalizedItem);
+        }
+    }
+
+    /**
+     * 从对象节点中按候选字段名读取第一个命中字段。
+     *
+     * @param objectNode 对象节点
+     * @param fieldNames 候选字段名
+     * @return 命中的字段节点
+     */
+    private JsonNode readObjectField(JsonNode objectNode, String... fieldNames) {
+        if (objectNode == null || !objectNode.isObject()) {
+            return null;
+        }
+        for (String fieldName : fieldNames) {
+            JsonNode fieldNode = objectNode.get(fieldName);
+            if (fieldNode != null && !fieldNode.isNull()) {
+                return fieldNode;
+            }
+        }
+        return null;
     }
 
     /**
@@ -207,6 +444,9 @@ public class SceneGenerateStep {
         if (actionNode.isTextual()) {
             return actionNode.asText();
         }
+        if (actionNode.isNumber() || actionNode.isBoolean()) {
+            return actionNode.asText();
+        }
         if (actionNode.isObject()) {
             JsonNode textNode = actionNode.get("text");
             if (textNode != null && textNode.isTextual()) {
@@ -218,6 +458,89 @@ public class SceneGenerateStep {
             }
         }
         return null;
+    }
+
+    /**
+     * 从任意节点中提取可读文本，优先兼容大模型常见的对象包装形态。
+     *
+     * @param fieldNode 原始字段节点
+     * @return 提取出的文本
+     */
+    private String extractReadableText(JsonNode fieldNode) {
+        if (fieldNode == null || fieldNode.isNull()) {
+            return "";
+        }
+        if (fieldNode.isTextual() || fieldNode.isNumber() || fieldNode.isBoolean()) {
+            return fieldNode.asText();
+        }
+        if (fieldNode.isObject()) {
+            for (String candidateField : List.of("name", "title", "summary", "text", "content", "label", "value", "description")) {
+                JsonNode candidateNode = fieldNode.get(candidateField);
+                if (candidateNode != null && !candidateNode.isNull()) {
+                    String candidateValue = extractReadableText(candidateNode);
+                    if (StringUtils.hasText(candidateValue)) {
+                        return candidateValue;
+                    }
+                }
+            }
+            return compactJson(fieldNode);
+        }
+        if (fieldNode.isArray()) {
+            List<String> nestedValues = new ArrayList<>();
+            fieldNode.forEach(itemNode -> {
+                String itemValue = extractReadableText(itemNode);
+                if (StringUtils.hasText(itemValue)) {
+                    nestedValues.add(itemValue.trim());
+                }
+            });
+            return String.join("；", nestedValues);
+        }
+        return fieldNode.asText("");
+    }
+
+    /**
+     * 按中文顿号、逗号、分号和换行拆分模型返回的列表文本。
+     *
+     * @param rawValue 原始文本
+     * @return 拆分后的文本列表
+     */
+    private List<String> splitListText(String rawValue) {
+        if (!StringUtils.hasText(rawValue)) {
+            return List.of();
+        }
+        String normalized = rawValue.trim();
+        if (!normalized.contains("，")
+            && !normalized.contains(",")
+            && !normalized.contains("、")
+            && !normalized.contains("；")
+            && !normalized.contains(";")
+            && !normalized.contains("\n")) {
+            return List.of(normalized);
+        }
+
+        String[] items = normalized.split("\\s*[，,、；;\\n]+\\s*");
+        List<String> results = new ArrayList<>();
+        for (String item : items) {
+            if (StringUtils.hasText(item)) {
+                results.add(item.trim());
+            }
+        }
+        return results;
+    }
+
+    /**
+     * 将复杂节点压缩为单行 JSON 文本，避免兼容解析时直接失败。
+     *
+     * @param node 待压缩节点
+     * @return 单行 JSON 文本
+     */
+    private String compactJson(JsonNode node) {
+        try {
+            return objectMapper.writeValueAsString(node);
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalStateException("场景生成复杂字段无法序列化。", exception);
+        }
     }
 
     /**

@@ -2,6 +2,7 @@ package com.qiniuyun.novelscript.pipeline.step;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qiniuyun.novelscript.ai.adapter.AiChatAdapter;
 import com.qiniuyun.novelscript.ai.prompt.PromptTemplateService;
@@ -109,7 +110,7 @@ public class GlobalContextMergeStep {
     }
 
     /**
-     * 解析全局上下文合并结果，并补齐项目信息与来源引用。
+     * 解析全局上下文合并结果，并补齐项目与来源引用信息。
      *
      * @param projectId 项目 ID
      * @param aiResponse 模型原始返回
@@ -126,19 +127,183 @@ public class GlobalContextMergeStep {
         }
 
         try {
-            GlobalContextMergeResult result = objectMapper.readValue(aiResponse, GlobalContextMergeResult.class);
+            JsonNode rootNode = objectMapper.readTree(aiResponse);
+            if (rootNode == null || !rootNode.isObject()) {
+                throw new IllegalStateException("全局上下文合并结果不是合法的 JSON 对象。");
+            }
+
+            GlobalContextMergeResult result = new GlobalContextMergeResult();
             result.setProjectId(projectId);
-            result.setSummary(StringUtils.hasText(result.getSummary()) ? result.getSummary().trim() : "");
-            result.setCharacters(safeList(result.getCharacters()));
-            result.setLocations(safeList(result.getLocations()));
-            result.setTimeline(safeList(result.getTimeline()));
-            result.setRelationships(safeList(result.getRelationships()));
-            result.setConflicts(safeList(result.getConflicts()));
-            result.setSourceContextRefs(resolveSourceRefs(result.getSourceContextRefs(), chapterContexts));
+            result.setSummary(readTrimmedText(rootNode, "summary"));
+            result.setCharacters(readStringList(rootNode, "characters"));
+            result.setLocations(readStringList(rootNode, "locations"));
+            result.setTimeline(readStringList(rootNode, "timeline"));
+            result.setRelationships(readStringList(rootNode, "relationships"));
+            result.setConflicts(readStringList(rootNode, "conflicts"));
+            result.setSourceContextRefs(
+                resolveSourceRefs(
+                    readStringList(rootNode, "source_context_refs", "sourceContextRefs"),
+                    chapterContexts
+                )
+            );
             return result;
         }
         catch (JsonProcessingException exception) {
             throw new IllegalStateException("全局上下文合并结果无法解析为 JSON。", exception);
+        }
+    }
+
+    /**
+     * 读取单个文本字段，缺失时返回空字符串。
+     *
+     * @param rootNode JSON 根节点
+     * @param fieldNames 候选字段名
+     * @return 清理后的字段值
+     */
+    private String readTrimmedText(JsonNode rootNode, String... fieldNames) {
+        JsonNode fieldNode = findField(rootNode, fieldNames);
+        if (fieldNode == null || fieldNode.isNull()) {
+            return "";
+        }
+
+        String value = extractStringValue(fieldNode);
+        return StringUtils.hasText(value) ? value.trim() : "";
+    }
+
+    /**
+     * 读取字符串列表字段，兼容数组、单值字符串与简单对象包装。
+     *
+     * @param rootNode JSON 根节点
+     * @param fieldNames 候选字段名
+     * @return 清洗后的字符串列表
+     */
+    private List<String> readStringList(JsonNode rootNode, String... fieldNames) {
+        JsonNode fieldNode = findField(rootNode, fieldNames);
+        if (fieldNode == null || fieldNode.isNull()) {
+            return new ArrayList<>();
+        }
+
+        List<String> values = new ArrayList<>();
+        if (fieldNode.isArray()) {
+            fieldNode.forEach(itemNode -> appendStringValues(values, itemNode));
+            return safeList(values);
+        }
+
+        appendStringValues(values, fieldNode);
+        return safeList(values);
+    }
+
+    /**
+     * 按候选字段名顺序查找第一个存在的字段。
+     *
+     * @param rootNode JSON 根节点
+     * @param fieldNames 候选字段名
+     * @return 命中的字段节点
+     */
+    private JsonNode findField(JsonNode rootNode, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode fieldNode = rootNode.get(fieldName);
+            if (fieldNode != null && !fieldNode.isNull()) {
+                return fieldNode;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 将节点中的文本值追加到目标列表，必要时按常见分隔符拆分。
+     *
+     * @param values 目标列表
+     * @param itemNode 待提取节点
+     */
+    private void appendStringValues(List<String> values, JsonNode itemNode) {
+        String rawValue = extractStringValue(itemNode);
+        if (!StringUtils.hasText(rawValue)) {
+            return;
+        }
+
+        for (String item : splitListText(rawValue)) {
+            if (StringUtils.hasText(item)) {
+                values.add(item.trim());
+            }
+        }
+    }
+
+    /**
+     * 从任意节点提取可读文本，优先兼容模型常见的对象包装形态。
+     *
+     * @param itemNode 待提取节点
+     * @return 提取出的文本
+     */
+    private String extractStringValue(JsonNode itemNode) {
+        if (itemNode == null || itemNode.isNull()) {
+            return "";
+        }
+        if (itemNode.isTextual() || itemNode.isNumber() || itemNode.isBoolean()) {
+            return itemNode.asText();
+        }
+        if (itemNode.isObject()) {
+            for (String candidateField : List.of("name", "title", "summary", "text", "content", "label", "value", "description")) {
+                JsonNode candidateNode = itemNode.get(candidateField);
+                if (candidateNode != null && !candidateNode.isNull()) {
+                    String candidateValue = extractStringValue(candidateNode);
+                    if (StringUtils.hasText(candidateValue)) {
+                        return candidateValue;
+                    }
+                }
+            }
+            return compactJson(itemNode);
+        }
+        if (itemNode.isArray()) {
+            List<String> nestedValues = new ArrayList<>();
+            itemNode.forEach(nestedNode -> appendStringValues(nestedValues, nestedNode));
+            return String.join("；", nestedValues);
+        }
+        return itemNode.asText("");
+    }
+
+    /**
+     * 按中文顿号、逗号、分号和换行拆分模型返回的列表文本。
+     *
+     * @param rawValue 原始文本
+     * @return 拆分后的文本列表
+     */
+    private List<String> splitListText(String rawValue) {
+        if (!StringUtils.hasText(rawValue)) {
+            return List.of();
+        }
+        String normalized = rawValue.trim();
+        if (!normalized.contains("，")
+            && !normalized.contains(",")
+            && !normalized.contains("、")
+            && !normalized.contains("；")
+            && !normalized.contains(";")
+            && !normalized.contains("\n")) {
+            return List.of(normalized);
+        }
+
+        String[] items = normalized.split("\\s*[，,、；;\\n]+\\s*");
+        List<String> results = new ArrayList<>();
+        for (String item : items) {
+            if (StringUtils.hasText(item)) {
+                results.add(item.trim());
+            }
+        }
+        return results;
+    }
+
+    /**
+     * 将复杂节点压缩为单行 JSON 文本，避免兼容解析时直接失败。
+     *
+     * @param node 待压缩节点
+     * @return 单行 JSON 文本
+     */
+    private String compactJson(JsonNode node) {
+        try {
+            return objectMapper.writeValueAsString(node);
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalStateException("全局上下文复杂字段无法序列化。", exception);
         }
     }
 

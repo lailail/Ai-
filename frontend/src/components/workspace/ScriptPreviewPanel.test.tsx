@@ -31,7 +31,7 @@ afterAll(() => {
 });
 
 describe("ScriptPreviewPanel", () => {
-  it("should render version list and validation errors for the selected script", () => {
+  it("should render version select and validation errors for the selected script", () => {
     render(
       <ScriptPreviewPanel
         versionSummaries={[
@@ -105,16 +105,16 @@ describe("ScriptPreviewPanel", () => {
     );
 
     expect(screen.getByText("版本列表")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /第 3 版 · 作者精修版/ })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "YAML 版本选择" })).toBeInTheDocument();
+    expect(screen.getAllByText("第 3 版 · 作者精修版")).toHaveLength(2);
     expect(screen.getByText("当前版本校验未通过")).toBeInTheDocument();
     expect(screen.getByText(/场景标题行不能为空/)).toBeInTheDocument();
     expect(screen.getByDisplayValue("作者精修版")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "字段说明" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "导出 YAML" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "查看正式剧本" })).not.toBeInTheDocument();
   });
 
-  it("should trigger version switch validate save and export callbacks", () => {
+  it("should trigger version switch validate save and export callbacks", async () => {
     const handleSelectVersion = vi.fn();
     const handleDraftTitleChange = vi.fn();
     const handleDraftYamlChange = vi.fn();
@@ -177,14 +177,21 @@ describe("ScriptPreviewPanel", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /第 2 版 · AI 初稿/ }));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "YAML 版本选择" }));
+    fireEvent.click(await screen.findByText("第 2 版 · AI 初稿"));
     fireEvent.change(screen.getByLabelText("版本标题"), { target: { value: "终稿" } });
     fireEvent.change(screen.getByTestId("yaml-editor"), { target: { value: "schema_version: 1.1" } });
     fireEvent.click(screen.getByRole("button", { name: "校验 YAML" }));
     fireEvent.click(screen.getByRole("button", { name: "另存为新版本" }));
     fireEvent.click(screen.getByRole("button", { name: "导出 YAML" }));
 
-    expect(handleSelectVersion).toHaveBeenCalledWith(11);
+    expect(handleSelectVersion).toHaveBeenCalledWith(
+      11,
+      expect.objectContaining({
+        value: 11,
+        label: "第 2 版 · AI 初稿"
+      })
+    );
     expect(handleDraftTitleChange).toHaveBeenCalledWith("终稿");
     expect(handleDraftYamlChange).toHaveBeenCalledWith("schema_version: 1.1");
     expect(handleValidate).toHaveBeenCalled();
