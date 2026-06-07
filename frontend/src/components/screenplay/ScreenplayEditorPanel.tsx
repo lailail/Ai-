@@ -32,8 +32,8 @@ export function ScreenplayEditorPanel({
         <Alert
           type="info"
           showIcon
-          message="请选择一个正式剧本版本"
-          description="左侧会列出当前项目的剧本版本。选中后即可在这里继续修改正式剧本。"
+          message="当前版本还没有正式剧本内容"
+          description="右侧操作区可以直接基于当前 YAML 版本渲染正式剧本，渲染完成后这里会自动展示可编辑文本。"
         />
       ) : (
         <>

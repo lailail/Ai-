@@ -4,17 +4,24 @@ import { Alert, Button, Form, Input, List, Space, Spin, Tabs, Tag, Typography, m
 import { useNavigate, useParams } from "react-router-dom";
 import {
   createProjectChapter,
+  downloadProjectScreenplay,
   generateProjectScript,
   getLatestAdaptationJob,
   getLatestProjectScript,
   getLatestStoryBible,
   getProject,
+  getProjectScreenplay,
   getProjectScriptVersion,
   listProjectChapters,
   listProjectScriptVersions,
+  renderProjectScreenplay,
+  saveProjectScreenplay,
   saveProjectScriptVersion,
   validateProjectScript
 } from "../api/projects";
+import { ScreenplayActionPanel } from "../components/screenplay/ScreenplayActionPanel";
+import { ScreenplayEditorPanel } from "../components/screenplay/ScreenplayEditorPanel";
+import { ScreenplayVersionList } from "../components/screenplay/ScreenplayVersionList";
 import { AdaptationStatusPanel } from "../components/workspace/AdaptationStatusPanel";
 import { ScriptPreviewPanel } from "../components/workspace/ScriptPreviewPanel";
 import { StoryBiblePanel } from "../components/workspace/StoryBiblePanel";
@@ -33,11 +40,12 @@ const TAB_KEYS = {
   chapters: "chapters",
   progress: "progress",
   storyBible: "story-bible",
-  yaml: "yaml"
+  yaml: "yaml",
+  screenplay: "screenplay"
 } as const;
 
 /**
- * 承载单个小说项目工作台的主页面。
+ * 承载单个小说改编项目主工作台页面。
  */
 export function ProjectWorkspacePage() {
   const navigate = useNavigate();
@@ -53,6 +61,9 @@ export function ProjectWorkspacePage() {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftYamlContent, setDraftYamlContent] = useState("");
   const [validationResult, setValidationResult] = useState<ScriptValidationResult | null>(null);
+  const [screenplayDraftSourceVersionId, setScreenplayDraftSourceVersionId] = useState<number | null>(null);
+  const [screenplayDraftTitle, setScreenplayDraftTitle] = useState("");
+  const [screenplayDraftMarkdownContent, setScreenplayDraftMarkdownContent] = useState("");
 
   useEffect(() => {
     if (isValidProjectId) {
@@ -103,6 +114,12 @@ export function ProjectWorkspacePage() {
     enabled: isValidProjectId && selectedScriptVersionId !== null
   });
 
+  const selectedScreenplayQuery = useQuery({
+    queryKey: ["project-screenplay", numericProjectId, selectedScriptVersionId],
+    queryFn: () => getProjectScreenplay(numericProjectId, selectedScriptVersionId as number),
+    enabled: isValidProjectId && selectedScriptVersionId !== null
+  });
+
   useEffect(() => {
     if (chaptersQuery.data) {
       form.setFieldsValue({
@@ -115,6 +132,8 @@ export function ProjectWorkspacePage() {
     const versionSummaries = scriptVersionsQuery.data ?? [];
     if (versionSummaries.length === 0) {
       setSelectedScriptVersionId(null);
+      setDraftSourceVersionId(null);
+      setScreenplayDraftSourceVersionId(null);
       return;
     }
 
@@ -122,6 +141,7 @@ export function ProjectWorkspacePage() {
     if (!stillExists) {
       setSelectedScriptVersionId(versionSummaries[0].scriptVersionId);
       setDraftSourceVersionId(null);
+      setScreenplayDraftSourceVersionId(null);
     }
   }, [scriptVersionsQuery.data, selectedScriptVersionId]);
 
@@ -138,6 +158,17 @@ export function ProjectWorkspacePage() {
   }, [draftSourceVersionId, selectedScriptQuery.data]);
 
   useEffect(() => {
+    const selectedScreenplay = selectedScreenplayQuery.data;
+    if (!selectedScreenplay || screenplayDraftSourceVersionId === selectedScreenplay.scriptVersionId) {
+      return;
+    }
+
+    setScreenplayDraftSourceVersionId(selectedScreenplay.scriptVersionId);
+    setScreenplayDraftTitle(selectedScreenplay.title);
+    setScreenplayDraftMarkdownContent(selectedScreenplay.markdownContent);
+  }, [screenplayDraftSourceVersionId, selectedScreenplayQuery.data]);
+
+  useEffect(() => {
     if (!watchingJobId || !latestJobQuery.data || latestJobQuery.data.jobId !== watchingJobId) {
       return;
     }
@@ -148,7 +179,7 @@ export function ProjectWorkspacePage() {
         queryClient.invalidateQueries({ queryKey: ["project-latest-story-bible", numericProjectId] }),
         queryClient.invalidateQueries({ queryKey: ["project-script-versions", numericProjectId] })
       ]);
-      message.success("改编完成，最新 Story Bible 和 YAML 工作区已刷新。");
+      message.success("改编完成，最新 Story Bible 和剧本版本已刷新。");
       setWatchingJobId(null);
     }
 
@@ -236,10 +267,60 @@ export function ProjectWorkspacePage() {
     }
   });
 
+  const renderScreenplayMutation = useMutation({
+    mutationFn: () => renderProjectScreenplay(numericProjectId, selectedScriptVersionId as number),
+    onSuccess: async (screenplay) => {
+      setSelectedScriptVersionId(screenplay.scriptVersionId);
+      setScreenplayDraftSourceVersionId(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["project-screenplay", numericProjectId, screenplay.scriptVersionId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-latest-script", numericProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-script-versions", numericProjectId] })
+      ]);
+      message.success("正式剧本已根据当前 YAML 重新渲染。");
+    },
+    onError: (error: Error) => {
+      message.error(error.message);
+    }
+  });
+
+  const saveScreenplayMutation = useMutation({
+    mutationFn: () =>
+      saveProjectScreenplay(
+        numericProjectId,
+        selectedScriptVersionId as number,
+        screenplayDraftTitle,
+        screenplayDraftMarkdownContent
+      ),
+    onSuccess: async (script) => {
+      const nextVersionId = script.scriptVersionId;
+      setSelectedScriptVersionId(nextVersionId);
+      setDraftSourceVersionId(null);
+      setScreenplayDraftSourceVersionId(null);
+      setValidationResult(buildValidationResultFromScript(script));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["project-script-versions", numericProjectId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-script-version", numericProjectId, nextVersionId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-screenplay", numericProjectId, nextVersionId] }),
+        queryClient.invalidateQueries({ queryKey: ["project-latest-script", numericProjectId] })
+      ]);
+      message.success(`正式剧本已保存，并生成第 ${script.versionNo} 版 YAML。`);
+    },
+    onError: (error: Error) => {
+      message.error(error.message);
+    }
+  });
+
   const selectedScript = selectedScriptQuery.data ?? null;
+  const selectedScreenplay = selectedScreenplayQuery.data ?? null;
   const hasUnsavedChanges = Boolean(
     selectedScript &&
       (draftTitle !== selectedScript.title || draftYamlContent !== selectedScript.yamlContent)
+  );
+  const hasUnsavedScreenplayChanges = Boolean(
+    selectedScreenplay &&
+      (screenplayDraftTitle !== selectedScreenplay.title ||
+        screenplayDraftMarkdownContent !== selectedScreenplay.markdownContent)
   );
 
   const chapterTabContent = useMemo(() => {
@@ -400,6 +481,18 @@ export function ProjectWorkspacePage() {
         />
       ) : null}
 
+      {selectedScreenplayQuery.isError ? (
+        <Alert
+          className="workspace-alert"
+          type="error"
+          showIcon
+          message="正式剧本查询失败"
+          description={
+            selectedScreenplayQuery.error instanceof Error ? selectedScreenplayQuery.error.message : "请稍后重试。"
+          }
+        />
+      ) : null}
+
       <section className="workspace-tabs-shell">
         <Tabs
           activeKey={activeTab}
@@ -453,6 +546,7 @@ export function ProjectWorkspacePage() {
                   onSelectVersion={(scriptVersionId) => {
                     setSelectedScriptVersionId(scriptVersionId);
                     setDraftSourceVersionId(null);
+                    setScreenplayDraftSourceVersionId(null);
                   }}
                   onDraftTitleChange={setDraftTitle}
                   onDraftYamlChange={(value) => {
@@ -462,15 +556,73 @@ export function ProjectWorkspacePage() {
                   onValidate={() => validateScriptMutation.mutate()}
                   onSave={() => saveScriptVersionMutation.mutate()}
                   onExportYaml={() => {
-                    downloadTextFile(`${sanitizeFileName(draftTitle || "script")}.yaml`, draftYamlContent, "text/yaml");
+                    downloadTextFile(
+                      `${sanitizeFileName(draftTitle || "script")}.yaml`,
+                      draftYamlContent,
+                      "text/yaml"
+                    );
                     message.success("YAML 文件已开始下载。");
                   }}
                   onOpenScreenplay={() => {
-                    const targetVersionId = selectedScript?.scriptVersionId ?? selectedScriptVersionId;
-                    const suffix = targetVersionId ? `?version=${targetVersionId}` : "";
-                    navigate(`/projects/${numericProjectId}/screenplay${suffix}`);
+                    setActiveTab(TAB_KEYS.screenplay);
                   }}
                 />
+              )
+            },
+            {
+              key: TAB_KEYS.screenplay,
+              label: "正式剧本",
+              children: (
+                <section className="panel panel-soft">
+                  <div className="panel-heading">
+                    <Typography.Text className="eyebrow">正式剧本工作区</Typography.Text>
+                    <Typography.Title level={4}>面向作者阅读与润色的剧本视图</Typography.Title>
+                  </div>
+                  <Typography.Paragraph className="panel-copy">
+                    这里展示的是由 YAML 结构稿渲染得到的正式剧本视图。你可以切换版本、重新渲染、直接编辑并保存回
+                    YAML，同时导出 Markdown 或 TXT。
+                  </Typography.Paragraph>
+
+                  <div className="screenplay-workspace">
+                    <ScreenplayVersionList
+                      versionSummaries={scriptVersionsQuery.data ?? []}
+                      selectedScriptVersionId={selectedScriptVersionId}
+                      isLoading={scriptVersionsQuery.isLoading}
+                      onSelectVersion={(scriptVersionId) => {
+                        setSelectedScriptVersionId(scriptVersionId);
+                        setDraftSourceVersionId(null);
+                        setScreenplayDraftSourceVersionId(null);
+                      }}
+                    />
+
+                    <ScreenplayEditorPanel
+                      selectedScreenplay={selectedScreenplay}
+                      draftTitle={screenplayDraftTitle}
+                      draftMarkdownContent={screenplayDraftMarkdownContent}
+                      hasUnsavedChanges={hasUnsavedScreenplayChanges}
+                      isLoading={selectedScreenplayQuery.isLoading}
+                      onDraftTitleChange={setScreenplayDraftTitle}
+                      onDraftMarkdownChange={setScreenplayDraftMarkdownContent}
+                    />
+
+                    <ScreenplayActionPanel
+                      selectedScreenplay={selectedScreenplay}
+                      canRender={selectedScriptVersionId !== null}
+                      hasUnsavedChanges={hasUnsavedScreenplayChanges}
+                      isRendering={renderScreenplayMutation.isPending}
+                      isSaving={saveScreenplayMutation.isPending}
+                      onRender={() => renderScreenplayMutation.mutate()}
+                      onSave={() => saveScreenplayMutation.mutate()}
+                      onExportMarkdown={() => {
+                        void downloadScreenplay(numericProjectId, selectedScriptVersionId, "md");
+                      }}
+                      onExportText={() => {
+                        void downloadScreenplay(numericProjectId, selectedScriptVersionId, "txt");
+                      }}
+                      onBackToYaml={() => setActiveTab(TAB_KEYS.yaml)}
+                    />
+                  </div>
+                </section>
               )
             }
           ]}
@@ -525,6 +677,31 @@ function downloadTextFile(fileName: string, content: string, mimeType: string) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * 下载指定版本的正式剧本文件。
+ *
+ * @param projectId 项目 ID
+ * @param scriptVersionId 剧本版本 ID
+ * @param format 导出格式
+ */
+async function downloadScreenplay(projectId: number, scriptVersionId: number | null, format: "md" | "txt") {
+  if (!scriptVersionId) {
+    message.warning("请先选择要导出的正式剧本版本。");
+    return;
+  }
+
+  const file = await downloadProjectScreenplay(projectId, scriptVersionId, format);
+  const url = URL.createObjectURL(file.blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  message.success(`正式剧本 ${format.toUpperCase()} 文件已开始下载。`);
 }
 
 /**

@@ -8,6 +8,7 @@ import type {
   StoryBibleSnapshot
 } from "../types/adaptation";
 import type { CreateChapterPayload, CreateProjectPayload, Project, SourceChapter } from "../types/project";
+import { extractDownloadFileName } from "../utils/download";
 
 type DownloadFileResult = {
   blob: Blob;
@@ -142,8 +143,15 @@ export async function getLatestProjectScreenplay(projectId: number) {
  * @param scriptVersionId 剧本版本 ID
  * @returns 正式剧本详情
  */
-export function getProjectScreenplay(projectId: number, scriptVersionId: number) {
-  return requestJson<ScreenplaySnapshot>(`/api/projects/${projectId}/screenplays/${scriptVersionId}`);
+export async function getProjectScreenplay(projectId: number, scriptVersionId: number) {
+  try {
+    return await requestJson<ScreenplaySnapshot>(`/api/projects/${projectId}/screenplays/${scriptVersionId}`);
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -245,11 +253,3 @@ export async function getLatestStoryBible(projectId: number) {
  * @param fallback 默认文件名
  * @returns 可用于浏览器下载的文件名
  */
-function extractDownloadFileName(contentDisposition: string | null, fallback: string) {
-  if (!contentDisposition) {
-    return fallback;
-  }
-
-  const matches = /filename="([^"]+)"/.exec(contentDisposition);
-  return matches?.[1] ?? fallback;
-}

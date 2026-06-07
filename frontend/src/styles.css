@@ -249,34 +249,59 @@ body {
   padding-inline: 0 !important;
 }
 
-.yaml-version-button {
+.version-card-button {
   width: 100%;
   height: auto;
-  padding: 14px 16px;
+  padding: 16px 18px;
   text-align: left;
   justify-content: flex-start;
+  border-radius: 18px;
 }
 
-.yaml-version-button .ant-btn-icon {
+.version-card-button .ant-btn-icon {
   display: none;
 }
 
-.yaml-version-button > span {
+.version-card-button > span {
   width: 100%;
 }
 
-.yaml-version-title {
-  display: block;
-  margin-bottom: 10px;
-  font-weight: 600;
-  white-space: normal;
+.version-card-content {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.yaml-version-time {
-  display: block;
-  margin-top: 10px;
+.version-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.version-card-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.version-card-time {
+  flex-shrink: 0;
   font-size: 12px;
   color: rgba(30, 42, 50, 0.68);
+}
+
+.version-card-tags {
+  width: 100%;
+}
+
+.version-card-button.ant-btn-primary .version-card-title,
+.version-card-button.ant-btn-primary .version-card-time {
+  color: #f8f4ec;
 }
 
 .yaml-editor-heading {
@@ -477,5 +502,13 @@ body {
 
   .screenplay-action-panel {
     position: static;
+  }
+
+  .version-card-header {
+    flex-direction: column;
+  }
+
+  .version-card-time {
+    flex-shrink: 1;
   }
 }
