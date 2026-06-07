@@ -4,15 +4,7 @@ import { AdaptationStatusPanel } from "./AdaptationStatusPanel";
 describe("AdaptationStatusPanel", () => {
   it("should keep the start button disabled when chapter count is less than three", () => {
     render(
-      <AdaptationStatusPanel
-        chapterCount={2}
-        isStarting={false}
-        latestJob={null}
-        latestScript={null}
-        onOpenStoryBible={() => {}}
-        onOpenYamlPreview={() => {}}
-        onStart={() => {}}
-      />
+      <AdaptationStatusPanel chapterCount={2} isStarting={false} latestJob={null} latestScript={null} onStart={() => {}} />
     );
 
     expect(screen.getByRole("button", { name: "开始改编" })).toBeDisabled();
@@ -39,8 +31,6 @@ describe("AdaptationStatusPanel", () => {
           finishedAt: null
         }}
         latestScript={null}
-        onOpenStoryBible={() => {}}
-        onOpenYamlPreview={() => {}}
         onStart={() => {}}
       />
     );
@@ -50,7 +40,7 @@ describe("AdaptationStatusPanel", () => {
     expect(screen.getByText("场景生成")).toBeInTheDocument();
   });
 
-  it("should show quick actions when the latest script is available", () => {
+  it("should not show legacy jump buttons when the latest script is available", () => {
     render(
       <AdaptationStatusPanel
         chapterCount={3}
@@ -83,14 +73,12 @@ describe("AdaptationStatusPanel", () => {
           jobId: 9,
           jobStatus: "SUCCEEDED"
         }}
-        onOpenStoryBible={() => {}}
-        onOpenYamlPreview={() => {}}
         onStart={() => {}}
       />
     );
 
     expect(screen.getByText("当前已生成到第 2 版。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "查看 Story Bible" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "查看 YAML 初稿" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "查看 Story Bible" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "查看 YAML 初稿" })).not.toBeInTheDocument();
   });
 });

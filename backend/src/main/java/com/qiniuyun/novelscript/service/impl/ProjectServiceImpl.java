@@ -25,6 +25,12 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectMapper projectMapper;
     private final SourceChapterMapper sourceChapterMapper;
 
+    /**
+     * 构造项目服务实现。
+     *
+     * @param projectMapper 项目 Mapper
+     * @param sourceChapterMapper 章节 Mapper
+     */
     public ProjectServiceImpl(ProjectMapper projectMapper, SourceChapterMapper sourceChapterMapper) {
         this.projectMapper = projectMapper;
         this.sourceChapterMapper = sourceChapterMapper;
@@ -72,7 +78,7 @@ public class ProjectServiceImpl implements ProjectService {
      * 查询指定项目详情。
      *
      * @param projectId 项目 ID
-     * @return 项目响应
+     * @return 项目详情响应
      */
     @Override
     @Transactional(readOnly = true)
@@ -80,7 +86,7 @@ public class ProjectServiceImpl implements ProjectService {
         log.info("【项目服务】开始查询项目详情，项目ID：{}", projectId);
         Project project = projectMapper.selectById(projectId);
         if (project == null) {
-            throw new ResourceNotFoundException("项目不存在");
+            throw new ResourceNotFoundException("项目不存在。");
         }
 
         Long chapterCount = sourceChapterMapper.selectCount(
@@ -90,6 +96,12 @@ public class ProjectServiceImpl implements ProjectService {
         return ProjectResponse.from(project, chapterCount == null ? 0 : chapterCount.intValue());
     }
 
+    /**
+     * 将项目实体转换为项目摘要响应。
+     *
+     * @param project 项目实体
+     * @return 项目摘要响应
+     */
     private ProjectResponse toProjectResponse(Project project) {
         Long chapterCount = sourceChapterMapper.selectCount(
             new LambdaQueryWrapper<SourceChapter>().eq(SourceChapter::getProjectId, project.getId())

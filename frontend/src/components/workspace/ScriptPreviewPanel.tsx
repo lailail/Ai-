@@ -23,7 +23,6 @@ type ScriptPreviewPanelProps = {
   onValidate: () => void;
   onSave: () => void;
   onExportYaml: () => void;
-  onOpenScreenplay: () => void;
 };
 
 /**
@@ -45,8 +44,7 @@ export function ScriptPreviewPanel({
   onDraftYamlChange,
   onValidate,
   onSave,
-  onExportYaml,
-  onOpenScreenplay
+  onExportYaml
 }: ScriptPreviewPanelProps) {
   const [fieldGuideOpen, setFieldGuideOpen] = useState(false);
 
@@ -75,7 +73,7 @@ export function ScriptPreviewPanel({
         <Typography.Title level={4}>YAML 版本化编辑区</Typography.Title>
       </div>
       <Typography.Paragraph className="panel-copy">
-        在这里维护结构化剧本草稿。你可以切换历史版本、执行 Schema 校验、导出 YAML，并跳转到正式剧本页继续影视化编辑。
+        在这里维护结构化剧本初稿。你可以切换历史版本、执行 Schema 校验、查看字段说明，并把当前内容导出为 YAML。
       </Typography.Paragraph>
 
       <div className="yaml-workspace">
@@ -117,7 +115,7 @@ export function ScriptPreviewPanel({
                   className="workspace-alert"
                   type="warning"
                   showIcon
-                  message="当前草稿存在未保存修改"
+                  message="当前初稿存在未保存修改"
                   description="你可以先执行 YAML 校验，再将修改内容另存为新版本。"
                 />
               ) : null}
@@ -143,9 +141,6 @@ export function ScriptPreviewPanel({
                   <Button onClick={() => setFieldGuideOpen(true)}>字段说明</Button>
                   <Button onClick={onExportYaml} disabled={!draftYamlContent.trim()}>
                     导出 YAML
-                  </Button>
-                  <Button type="default" onClick={onOpenScreenplay}>
-                    查看正式剧本
                   </Button>
                 </Space>
               </div>
@@ -194,7 +189,7 @@ export function ScriptPreviewPanel({
 }
 
 /**
- * 将后端来源类型转换为更易读的中文标签。
+ * 将来源类型转换为更易读的中文标签。
  *
  * @param sourceType 剧本版本来源类型
  * @returns 中文展示文案
@@ -210,10 +205,10 @@ function renderSourceType(sourceType: string) {
 }
 
 /**
- * 将后端返回的时间字符串格式化为更易读的展示文本。
+ * 将后端返回的时间字符串格式化为界面展示文案。
  *
  * @param createdAt 版本创建时间
- * @returns 面向界面的时间字符串
+ * @returns 格式化后的时间
  */
 function formatVersionTime(createdAt: string) {
   return createdAt.replace("T", " ").slice(0, 16);

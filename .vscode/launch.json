@@ -10,7 +10,7 @@
             "cwd": "${workspaceFolder}/backend",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "vmArgs": "-Dfile.encoding=UTF-8",
+            "vmArgs": "-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8",
             "env": {
                 "DEEPSEEK_API_KEY": "${env:DEEPSEEK_API_KEY}"
             }
@@ -24,7 +24,7 @@
             "cwd": "${workspaceFolder}/backend",
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
-            "vmArgs": "-Dfile.encoding=UTF-8",
+            "vmArgs": "-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8",
             "env": {
                 "SPRING_PROFILES_ACTIVE": "test",
                 "DEEPSEEK_API_KEY": "${env:DEEPSEEK_API_KEY}"

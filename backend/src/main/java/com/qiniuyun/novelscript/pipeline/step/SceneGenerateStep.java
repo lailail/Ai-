@@ -198,7 +198,7 @@ public class SceneGenerateStep {
      * 从动作节点中提取可读文本。
      *
      * @param actionNode 原始动作节点
-     * @return 动作文本
+     * @return 动作文案
      */
     private String extractActionText(JsonNode actionNode) {
         if (actionNode == null || actionNode.isNull()) {

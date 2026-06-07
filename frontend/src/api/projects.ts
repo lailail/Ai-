@@ -7,7 +7,13 @@ import type {
   ScriptVersionSummary,
   StoryBibleSnapshot
 } from "../types/adaptation";
-import type { CreateChapterPayload, CreateProjectPayload, Project, SourceChapter } from "../types/project";
+import type {
+  CreateChapterPayload,
+  CreateProjectPayload,
+  Project,
+  SourceChapter,
+  UpdateChapterPayload
+} from "../types/project";
 import { extractDownloadFileName } from "../utils/download";
 
 type DownloadFileResult = {
@@ -15,10 +21,21 @@ type DownloadFileResult = {
   fileName: string;
 };
 
+/**
+ * 查询项目列表。
+ *
+ * @returns 全部项目摘要
+ */
 export function listProjects() {
   return requestJson<Project[]>("/api/projects");
 }
 
+/**
+ * 创建改编项目。
+ *
+ * @param payload 项目创建参数
+ * @returns 新建项目
+ */
 export function createProject(payload: CreateProjectPayload) {
   return requestJson<Project>("/api/projects", {
     method: "POST",
@@ -26,14 +43,33 @@ export function createProject(payload: CreateProjectPayload) {
   });
 }
 
+/**
+ * 查询单个项目详情。
+ *
+ * @param projectId 项目 ID
+ * @returns 项目详情
+ */
 export function getProject(projectId: number) {
   return requestJson<Project>(`/api/projects/${projectId}`);
 }
 
+/**
+ * 查询项目章节列表。
+ *
+ * @param projectId 项目 ID
+ * @returns 已保存章节列表
+ */
 export function listProjectChapters(projectId: number) {
   return requestJson<SourceChapter[]>(`/api/projects/${projectId}/chapters`);
 }
 
+/**
+ * 创建章节。
+ *
+ * @param projectId 项目 ID
+ * @param payload 章节创建参数
+ * @returns 保存后的章节
+ */
 export function createProjectChapter(projectId: number, payload: CreateChapterPayload) {
   return requestJson<SourceChapter>(`/api/projects/${projectId}/chapters`, {
     method: "POST",
@@ -41,12 +77,39 @@ export function createProjectChapter(projectId: number, payload: CreateChapterPa
   });
 }
 
+/**
+ * 更新章节标题和正文。
+ *
+ * @param projectId 项目 ID
+ * @param chapterId 章节 ID
+ * @param payload 章节更新参数
+ * @returns 更新后的章节
+ */
+export function updateProjectChapter(projectId: number, chapterId: number, payload: UpdateChapterPayload) {
+  return requestJson<SourceChapter>(`/api/projects/${projectId}/chapters/${chapterId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * 触发项目改编。
+ *
+ * @param projectId 项目 ID
+ * @returns 最新任务快照
+ */
 export function generateProjectScript(projectId: number) {
   return requestJson<AdaptationJobSnapshot>(`/api/projects/${projectId}/adaptations`, {
     method: "POST"
   });
 }
 
+/**
+ * 查询最新改编任务。
+ *
+ * @param projectId 项目 ID
+ * @returns 最新任务，不存在时返回 null
+ */
 export async function getLatestAdaptationJob(projectId: number) {
   try {
     return await requestJson<AdaptationJobSnapshot>(`/api/projects/${projectId}/adaptations/latest-job`);
@@ -58,6 +121,12 @@ export async function getLatestAdaptationJob(projectId: number) {
   }
 }
 
+/**
+ * 查询最新 YAML 剧本版本。
+ *
+ * @param projectId 项目 ID
+ * @returns 最新剧本，不存在时返回 null
+ */
 export async function getLatestProjectScript(projectId: number) {
   try {
     return await requestJson<AdaptationScript>(`/api/projects/${projectId}/scripts/latest`);
@@ -70,7 +139,7 @@ export async function getLatestProjectScript(projectId: number) {
 }
 
 /**
- * 查询指定项目下的剧本版本列表。
+ * 查询剧本版本列表。
  *
  * @param projectId 项目 ID
  * @returns 剧本版本摘要列表
@@ -80,7 +149,7 @@ export function listProjectScriptVersions(projectId: number) {
 }
 
 /**
- * 查询指定项目下的某个剧本版本详情。
+ * 查询指定剧本版本详情。
  *
  * @param projectId 项目 ID
  * @param scriptVersionId 剧本版本 ID
@@ -91,10 +160,10 @@ export function getProjectScriptVersion(projectId: number, scriptVersionId: numb
 }
 
 /**
- * 对当前 YAML 草稿执行后端 Schema 校验。
+ * 执行 YAML Schema 校验。
  *
  * @param projectId 项目 ID
- * @param yamlContent 待校验的 YAML 原文
+ * @param yamlContent 待校验内容
  * @returns 结构化校验结果
  */
 export function validateProjectScript(projectId: number, yamlContent: string) {
@@ -105,12 +174,12 @@ export function validateProjectScript(projectId: number, yamlContent: string) {
 }
 
 /**
- * 将当前 YAML 草稿另存为新的剧本版本。
+ * 将 YAML 另存为新版本。
  *
  * @param projectId 项目 ID
  * @param title 新版本标题
- * @param yamlContent 编辑后的 YAML 原文
- * @returns 新创建的剧本版本详情
+ * @param yamlContent YAML 原文
+ * @returns 新剧本版本详情
  */
 export function saveProjectScriptVersion(projectId: number, title: string, yamlContent: string) {
   return requestJson<AdaptationScript>(`/api/projects/${projectId}/scripts`, {
@@ -120,7 +189,7 @@ export function saveProjectScriptVersion(projectId: number, title: string, yamlC
 }
 
 /**
- * 查询指定项目的最新正式剧本。
+ * 查询最新正式剧本。
  *
  * @param projectId 项目 ID
  * @returns 最新正式剧本，不存在时返回 null
@@ -155,11 +224,11 @@ export async function getProjectScreenplay(projectId: number, scriptVersionId: n
 }
 
 /**
- * 触发指定版本的正式剧本重新渲染。
+ * 重新渲染正式剧本。
  *
  * @param projectId 项目 ID
  * @param scriptVersionId 剧本版本 ID
- * @returns 渲染后的正式剧本
+ * @returns 最新正式剧本快照
  */
 export function renderProjectScreenplay(projectId: number, scriptVersionId: number) {
   return requestJson<ScreenplaySnapshot>(`/api/projects/${projectId}/screenplays/render`, {
@@ -175,7 +244,7 @@ export function renderProjectScreenplay(projectId: number, scriptVersionId: numb
  * @param scriptVersionId 原始剧本版本 ID
  * @param title 新版本标题
  * @param markdownContent 编辑后的正式剧本文本
- * @returns 新生成的 YAML 版本详情
+ * @returns 新生成的 YAML 版本
  */
 export function syncProjectScreenplayToYaml(
   projectId: number,
@@ -196,7 +265,7 @@ export function syncProjectScreenplayToYaml(
  * @param scriptVersionId 原始剧本版本 ID
  * @param title 新版本标题
  * @param markdownContent 编辑后的正式剧本文本
- * @returns 新生成的 YAML 版本详情
+ * @returns 新生成的 YAML 版本
  */
 export function saveProjectScreenplay(
   projectId: number,
@@ -211,7 +280,7 @@ export function saveProjectScreenplay(
 }
 
 /**
- * 下载指定版本的正式剧本文件。
+ * 下载正式剧本文件。
  *
  * @param projectId 项目 ID
  * @param scriptVersionId 剧本版本 ID
@@ -235,6 +304,12 @@ export async function downloadProjectScreenplay(
   };
 }
 
+/**
+ * 查询最新 Story Bible。
+ *
+ * @param projectId 项目 ID
+ * @returns 最新 Story Bible，不存在时返回 null
+ */
 export async function getLatestStoryBible(projectId: number) {
   try {
     return await requestJson<StoryBibleSnapshot>(`/api/projects/${projectId}/story-bible/latest`);
@@ -245,11 +320,3 @@ export async function getLatestStoryBible(projectId: number) {
     throw error;
   }
 }
-
-/**
- * 从下载响应头中提取文件名。
- *
- * @param contentDisposition 下载响应头
- * @param fallback 默认文件名
- * @returns 可用于浏览器下载的文件名
- */

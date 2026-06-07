@@ -11,7 +11,6 @@ type ScreenplayActionPanelProps = {
   onSave: () => void;
   onExportMarkdown: () => void;
   onExportText: () => void;
-  onBackToYaml: () => void;
 };
 
 /**
@@ -26,8 +25,7 @@ export function ScreenplayActionPanel({
   onRender,
   onSave,
   onExportMarkdown,
-  onExportText,
-  onBackToYaml
+  onExportText
 }: ScreenplayActionPanelProps) {
   return (
     <section className="screenplay-side-panel screenplay-action-panel">
@@ -91,7 +89,6 @@ export function ScreenplayActionPanel({
         <Button onClick={onExportText} disabled={!selectedScreenplay}>
           导出 TXT
         </Button>
-        <Button onClick={onBackToYaml}>返回 YAML 初稿</Button>
       </div>
     </section>
   );

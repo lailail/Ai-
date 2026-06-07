@@ -118,4 +118,47 @@ class ChapterContextExtractStepTests {
         assertThat(result.getLocations()).containsExactly("Old Alley");
         assertThat(result.getEvents()).isEqualTo(List.of());
     }
+
+    /**
+     * 验证模型把人物字段返回为对象数组时，系统仍可兼容提取人物名称。
+     */
+    @Test
+    void shouldExtractCharacterNamesWhenAiReturnsCharacterObjects() {
+        NormalizedChapter normalizedChapter = new NormalizedChapter();
+        normalizedChapter.setProjectId(1003L);
+        normalizedChapter.setChapterNo(3);
+        normalizedChapter.setTitle("Chapter 3 Return");
+        normalizedChapter.setContent("Shen Yan returns in the rain and notices the street is too quiet.");
+        normalizedChapter.setWordCount(14);
+
+        when(promptTemplateService.render(eq("chapter-context-extract"), anyMap())).thenReturn("analyze third chapter");
+        when(aiChatAdapter.chat(eq(ChapterContextExtractStep.SYSTEM_PROMPT), eq("analyze third chapter"))).thenReturn("""
+            {
+              "summary": "Shen Yan returns to the city in the rain and senses danger.",
+              "characters": [
+                {
+                  "name": "Shen Yan",
+                  "role": "Lead"
+                },
+                {
+                  "name": "Lao Zhou",
+                  "role": "Watcher"
+                }
+              ],
+              "locations": ["South Street"],
+              "events": ["Shen Yan returns to the city"],
+              "conflicts": ["He is unsure whether to keep moving forward"],
+              "emotion_changes": ["From calm to alert"],
+              "foreshadowing": ["The silent street feels unnatural"],
+              "key_dialogues": ["Shen Yan: Something is wrong here."],
+              "source_refs": ["chapter:3"]
+            }
+            """);
+
+        ChapterContextResult result = chapterContextExtractStep.execute(normalizedChapter);
+
+        assertThat(result.getCharacters()).containsExactly("Shen Yan", "Lao Zhou");
+        assertThat(result.getLocations()).containsExactly("South Street");
+        assertThat(result.getSourceRefs()).containsExactly("chapter:3");
+    }
 }
